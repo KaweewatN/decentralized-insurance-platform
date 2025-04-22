@@ -7,7 +7,15 @@ import InsuranceManagerABI from "../../abis/InsuranceManager.json";
 const CONTRACT_ADDRESS = "0x186F4399b41328aC711124C9b282E65D32fb334F";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState(null);
+  interface UserProfile {
+    fullName: string;
+    age: number;
+    gender: string;
+    occupation: string;
+    contactInfo: string;
+  }
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [status, setStatus] = useState("");
 
   // connect via MetaMask (ethers v6)
@@ -58,19 +66,19 @@ export default function ProfilePage() {
       {profile && (
         <div className="mt-6 space-y-2">
           <p>
-            <strong>Name:</strong> {profile.fullName}
+            <strong>Name:</strong> {profile.fullName ?? "-"}
           </p>
           <p>
-            <strong>Age:</strong> {profile.age.toString()}
+            <strong>Age:</strong> {profile.age.toString() ?? "-"}
           </p>
           <p>
-            <strong>Gender:</strong> {profile.gender}
+            <strong>Gender:</strong> {profile.gender ?? "-"}
           </p>
           <p>
-            <strong>Occupation:</strong> {profile.occupation}
+            <strong>Occupation:</strong> {profile.occupation ?? "-"}
           </p>
           <p>
-            <strong>Contact:</strong> {profile.contactInfo}
+            <strong>Contact:</strong> {profile.contactInfo ?? "-"}
           </p>
         </div>
       )}
