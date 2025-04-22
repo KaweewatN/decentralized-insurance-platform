@@ -28,6 +28,13 @@
     "next-dev": "lerna run dev --scope frontend",
     "contract-compile": "lerna run hardhat compile --scope contracts",
     "contract-test": "lerna run hardhat test --scope contracts",
-    "contract-deploy": "lerna run hardhat run scripts/deploy.ts --scope contracts"
+    "contract-deploy": "lerna run hardhat run scripts/deploy.ts --scope contracts",
+    "install-all": "lerna run install --scope contracts --scope frontend --scope backend",
+    "add-frontend": "lerna add --scope frontend",
+    "add-backend": "lerna add --scope backend",
+    "add-contracts": "lerna add --scope contracts",
+    "remove-frontend": "lerna remove --scope frontend",
+    "remove-backend": "lerna remove --scope backend",
+    "remove-contracts": "lerna remove --scope contracts"
   }
 }
