@@ -1,275 +1,601 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { ethers } from "ethers";
 import Link from "next/link";
-import InsuranceManagerABI from "../abis/InsuranceManager.json";
+import Image from "next/image";
+import {
+  Shield,
+  Lock,
+  Zap,
+  Users,
+  ArrowRight,
+  CheckCircle,
+} from "lucide-react";
 
-const CONTRACT_ADDRESS = "0x186F4399b41328aC711124C9b282E65D32fb334F";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-export default function Home() {
-  const [form, setForm] = useState({
-    fullName: "",
-    age: "",
-    gender: "male",
-    occupation: "",
-    contactInfo: "",
-    sumAssured: "",
-    plan: "1",
-  });
-  const [premium, setPremium] = useState(null);
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [ethPrice, setEthPrice] = useState<number | null>(null);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  // fetch ETH → THB price from your API every minute
-  useEffect(() => {
-    async function fetchEthPrice() {
-      try {
-        const res = await fetch(`${process.env.NEST_API_URL}/price/eththb`);
-        const data = await res.json();
-        setEthPrice(data.ethToThb);
-      } catch (err) {
-        console.error("Failed to fetch ETH/THB:", err);
-        setEthPrice(null);
-      }
-    }
-    fetchEthPrice();
-    const id = setInterval(fetchEthPrice, 3000);
-    return () => clearInterval(id);
-  }, []);
-
-  async function connectWallet() {
-    if (!window.ethereum) {
-      alert("Please install MetaMask");
-      return {};
-    }
-    // For ethers v6, use BrowserProvider instead of Web3Provider
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    const signer = await provider.getSigner();
-    const address = await signer.getAddress();
-    return { signer, address };
-  }
-
-  async function preview() {
-    if (!form.plan || !form.age || !form.sumAssured) {
-      setStatus("❌ Please fill all required fields.");
-      return;
-    }
-    setLoading(true);
-    try {
-      const { signer, address } = await connectWallet();
-      if (!signer || !address) {
-        setStatus("❌ Wallet not connected");
-        return;
-      }
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        InsuranceManagerABI.abi,
-        signer
-      );
-      const raw = await contract.previewPremiumForPlan(
-        parseInt(form.plan, 10),
-        parseInt(form.age, 10),
-        form.gender,
-        form.occupation,
-        parseInt(form.sumAssured, 10),
-        address
-      );
-      setPremium(raw);
-      setStatus(`💡 Estimated Premium: ${ethers.formatEther(raw)} ETH`);
-    } catch (err) {
-      console.error(err);
-      setStatus("❌ Failed to preview premium");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function purchase() {
-    setLoading(true);
-    try {
-      const { signer, address } = await connectWallet();
-      if (!signer || !address || !premium) {
-        setStatus("❌ Connect wallet and preview first");
-        return;
-      }
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        InsuranceManagerABI.abi,
-        signer
-      );
-      const tx = await contract.purchase(
-        form.plan,
-        form.fullName,
-        parseInt(form.age, 10),
-        form.gender,
-        form.occupation,
-        form.contactInfo,
-        parseInt(form.sumAssured, 10),
-        { value: premium }
-      );
-      setStatus("⏳ Waiting for confirmation...");
-      await tx.wait();
-      setStatus("✅ Insurance purchased successfully!");
-    } catch (err) {
-      console.error(err);
-      setStatus("❌ Transaction failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-gray-900 text-white px-6 py-12">
-      {/* NAVBAR */}
-      <nav className="flex justify-center gap-4 mb-8">
-        <Link href="/policy">
-          <button className="btn-gray">📄 My Policy</button>
-        </Link>
-        <Link href="/claim">
-          <button className="btn-gray">🧾 My Claim</button>
-        </Link>
-        <Link href="/profile">
-          <button className="btn-gray">👤 My Profile</button>
-        </Link>
-      </nav>
-
-      {/* ETH/THB PRICE */}
-      {ethPrice != null && (
-        <div className="text-center text-green-400 mb-6">
-          📈 1 ETH ≈ {ethPrice.toLocaleString()} THB
-        </div>
-      )}
-
-      {/* FORM */}
-      <div className="max-w-xl mx-auto bg-gray-800 p-8 rounded-xl shadow-lg space-y-6">
-        <h2 className="text-2xl font-bold text-center">🛡️ Buy Insurance</h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          <input
-            name="fullName"
-            placeholder="Full Name"
-            onChange={handleChange}
-            className="input"
-          />
-          <input
-            name="age"
-            type="number"
-            placeholder="Age"
-            onChange={handleChange}
-            className="input"
-          />
-          <select name="gender" onChange={handleChange} className="input">
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-          <input
-            name="occupation"
-            placeholder="Occupation"
-            onChange={handleChange}
-            className="input"
-          />
-          <input
-            name="contactInfo"
-            placeholder="Contact Info"
-            onChange={handleChange}
-            className="input col-span-2"
-          />
-          <input
-            name="sumAssured"
-            type="number"
-            placeholder="Sum Assured (THB)"
-            onChange={handleChange}
-            className="input col-span-2"
-          />
-          <select
-            name="plan"
-            onChange={handleChange}
-            className="input col-span-2"
-          >
-            <option value="1">LifeGuard99</option>
-            <option value="2">SmartReturn 80/6</option>
-          </select>
-        </div>
-
-        {/* ACTION BUTTONS */}
-        <div className="flex justify-center gap-4">
-          <button onClick={preview} className="btn-blue">
-            📊 Preview Premium
-          </button>
-          <button
-            onClick={purchase}
-            disabled={!premium || loading}
-            className="btn-green"
-          >
-            {loading ? "Processing..." : "💸 Purchase"}
-          </button>
-        </div>
-
-        {loading && (
-          <div className="flex justify-center">
-            <div className="loader"></div>
+    <div className="flex min-h-screen flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">ChainSure</span>
           </div>
-        )}
+          <nav className="hidden md:flex items-center gap-6">
+            <Link
+              href="#how-it-works"
+              className="text-sm font-medium hover:text-primary"
+            >
+              How It Works
+            </Link>
+            <Link
+              href="#benefits"
+              className="text-sm font-medium hover:text-primary"
+            >
+              Benefits
+            </Link>
+            <Link
+              href="#pools"
+              className="text-sm font-medium hover:text-primary"
+            >
+              Insurance Pools
+            </Link>
+            <Link
+              href="#security"
+              className="text-sm font-medium hover:text-primary"
+            >
+              Security
+            </Link>
+          </nav>
+          <Link href="/dashboard">
+            <Button>Connect Wallet</Button>
+          </Link>
+        </div>
+      </header>
 
-        <p className="text-center whitespace-pre-wrap">{status}</p>
-      </div>
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="py-20 md:py-28">
+          <div className="container px-4 md:px-6">
+            <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
+              <div className="space-y-4">
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Decentralized Insurance for the Digital Age
+                </h1>
+                <p className="text-muted-foreground md:text-xl">
+                  ChainSure leverages blockchain technology to provide
+                  transparent, efficient, and community-driven insurance
+                  solutions.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                  <Link href="/pools">
+                    <Button size="lg" className="gap-1">
+                      Explore Pools <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/learn-more">
+                    <Button size="lg" variant="outline">
+                      Learn More
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="relative h-[350px] w-full rounded-lg overflow-hidden">
+                <Image
+                  src="/placeholder.svg?height=700&width=700"
+                  alt="ChainSure Platform"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+        </section>
 
-      {/* STYLES */}
-      <style jsx>{`
-        .input {
-          background: #1f2937;
-          border: 1px solid #374151;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          color: white;
-          width: 100%;
-        }
-        .btn-blue {
-          background: #3b82f6;
-          padding: 0.5rem 1.2rem;
-          border-radius: 0.375rem;
-          font-weight: 600;
-        }
-        .btn-green {
-          background: #10b981;
-          padding: 0.5rem 1.2rem;
-          border-radius: 0.375rem;
-          font-weight: 600;
-        }
-        .btn-gray {
-          background: #6b7280;
-          padding: 0.5rem 1.2rem;
-          border-radius: 0.375rem;
-          font-weight: 600;
-        }
-        .btn-blue:hover,
-        .btn-green:hover,
-        .btn-gray:hover {
-          opacity: 0.9;
-        }
-        .loader {
-          border: 4px solid #e5e7eb;
-          border-top: 4px solid #3b82f6;
-          border-radius: 50%;
-          width: 36px;
-          height: 36px;
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
-    </main>
+        {/* How It Works */}
+        <section id="how-it-works" className="py-16 bg-muted/50">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  How ChainSure Works
+                </h2>
+                <p className="text-muted-foreground md:text-xl">
+                  A simple, transparent process powered by smart contracts
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mt-12">
+              <Card className="bg-background">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <span className="text-xl font-bold text-primary">1</span>
+                  </div>
+                  <CardTitle>Browse Pools</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Explore various insurance pools with different coverage
+                    options and terms.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-background">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <span className="text-xl font-bold text-primary">2</span>
+                  </div>
+                  <CardTitle>Get a Quote</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Receive an instant premium calculation based on your
+                    specific needs.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-background">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <span className="text-xl font-bold text-primary">3</span>
+                  </div>
+                  <CardTitle>Purchase Policy</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Pay premium with cryptocurrency and receive your policy as
+                    an NFT.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-background">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <span className="text-xl font-bold text-primary">4</span>
+                  </div>
+                  <CardTitle>File Claims</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Submit claims with evidence and receive automated payouts
+                    when approved.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Key Benefits */}
+        <section id="benefits" className="py-16">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Key Benefits
+                </h2>
+                <p className="text-muted-foreground md:text-xl">
+                  Why choose ChainSure for your insurance needs
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-12">
+              <Card>
+                <CardHeader>
+                  <Lock className="h-10 w-10 text-primary mb-4" />
+                  <CardTitle>Transparency</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    All policies, claims, and fund movements are recorded on the
+                    blockchain, providing complete transparency.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <Zap className="h-10 w-10 text-primary mb-4" />
+                  <CardTitle>Speed & Efficiency</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Smart contracts automate policy issuance and claims
+                    processing, reducing wait times and administrative costs.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <Users className="h-10 w-10 text-primary mb-4" />
+                  <CardTitle>Community-Driven</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Insurance pools are created and managed by the community,
+                    ensuring fair terms and competitive premiums.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Pools */}
+        <section id="pools" className="py-16 bg-muted/50">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Featured Insurance Pools
+                </h2>
+                <p className="text-muted-foreground md:text-xl">
+                  Explore our most popular insurance options
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-12">
+              <Card className="bg-background">
+                <CardHeader>
+                  <CardTitle>Flight Delay Insurance</CardTitle>
+                  <CardDescription>
+                    Protection against flight delays and cancellations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Total Value Locked
+                      </span>
+                      <span className="font-medium">250,000 USDC</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Members</span>
+                      <span className="font-medium">1,250</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Claims Paid</span>
+                      <span className="font-medium">95%</span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Link href={`/pools/POOL-001`}>
+                    <Button className="w-full">View Details</Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+              <Card className="bg-background">
+                <CardHeader>
+                  <CardTitle>Crypto Asset Protection</CardTitle>
+                  <CardDescription>
+                    Coverage against smart contract vulnerabilities
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Total Value Locked
+                      </span>
+                      <span className="font-medium">500,000 USDC</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Members</span>
+                      <span className="font-medium">850</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Claims Paid</span>
+                      <span className="font-medium">92%</span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Link href={`/pools/POOL-002`}>
+                    <Button className="w-full">View Details</Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+              <Card className="bg-background">
+                <CardHeader>
+                  <CardTitle>Health Emergency Fund</CardTitle>
+                  <CardDescription>
+                    Community-funded healthcare coverage
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Total Value Locked
+                      </span>
+                      <span className="font-medium">750,000 USDC</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Members</span>
+                      <span className="font-medium">2,100</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Claims Paid</span>
+                      <span className="font-medium">98%</span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Link href={`/pools/POOL-003`}>
+                    <Button className="w-full">View Details</Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            </div>
+            <div className="flex justify-center mt-8">
+              <Link href="/pools">
+                <Button variant="outline" size="lg">
+                  View All Insurance Pools
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Trust & Security */}
+        <section id="security" className="py-16">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Trust & Security
+                </h2>
+                <p className="text-muted-foreground md:text-xl">
+                  Your security is our top priority
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-8 md:grid-cols-2 mt-12">
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold">Audited Smart Contracts</h3>
+                <p className="text-muted-foreground">
+                  All our smart contracts undergo rigorous security audits by
+                  leading blockchain security firms to ensure the safety of your
+                  funds.
+                </p>
+                <ul className="space-y-2">
+                  {[
+                    "PolicyFactory",
+                    "PolicyPool",
+                    "PolicyNFT (ERC721)",
+                    "ClaimManager",
+                    "Treasury/PremiumHandler (ERC20)",
+                  ].map((contract) => (
+                    <li key={contract} className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>{contract}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button variant="outline">View Audit Reports</Button>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold">Transparent Operations</h3>
+                <p className="text-muted-foreground">
+                  ChainSure operates with complete transparency. All
+                  transactions, policy terms, and claim evidence are stored on
+                  the blockchain and IPFS, accessible to anyone.
+                </p>
+                <div className="grid grid-cols-2 gap-4 mt-6">
+                  <Card className="bg-muted/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Open Source</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        All our code is open source and available for review.
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Decentralized</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        No central authority controls the platform.
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Immutable</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Policy terms cannot be changed after issuance.
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Automated</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Claims processing follows predefined rules.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 bg-primary text-primary-foreground">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Ready to Get Started?
+                </h2>
+                <p className="md:text-xl opacity-90">
+                  Join the decentralized insurance revolution today
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <Link href="/dashboard">
+                  <Button size="lg" variant="secondary" className="gap-1">
+                    Connect Wallet <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/learn-more">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="bg-transparent border-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                  >
+                    Learn More
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t py-12">
+        <div className="container px-4 md:px-6">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Shield className="h-6 w-6 text-primary" />
+                <span className="text-xl font-bold">ChainSure</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Decentralized insurance for the digital age, powered by
+                blockchain technology.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Platform</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    How It Works
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Insurance Pools
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Policyholder Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    File a Claim
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Resources</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Documentation
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Smart Contracts
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Security Audits
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    FAQ
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Legal</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Cookie Policy
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-12 pt-8 border-t">
+            <p className="text-center text-sm text-muted-foreground">
+              © {new Date().getFullYear()} ChainSure. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
