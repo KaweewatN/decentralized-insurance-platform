@@ -39,7 +39,7 @@ export default function PublicHeader() {
           </Link>
         </nav>
         <Link href="/dashboard">
-          <Button>Connect Wallet</Button>
+          <Button>Sign in</Button>
         </Link>
       </div>
     </header>
