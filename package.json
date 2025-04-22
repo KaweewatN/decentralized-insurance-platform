@@ -1,0 +1,33 @@
+{
+  "name": "decentralized-insurance-platform",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "lerna": "^8.2.2"
+  },
+  "workspaces": [
+    "apps/*",
+    "contracts/*"
+  ],
+  "scripts": {
+    "bootstrap": "lerna bootstrap",
+    "build": "lerna run build",
+    "test": "lerna run test",
+    "lint": "lerna run lint",
+    "start": "lerna run start --parallel",
+    "dev": "lerna run dev --scope frontend --scope backend --parallel",
+    "nest-build": "lerna run build --scope backend",
+    "nest-start": "lerna run start --scope backend",
+    "nest-dev": "lerna run dev --scope backend",
+    "nest-test": "lerna run test --scope backend",
+    "nest-test-watch": "lerna run test:watch --scope backend",
+    "next-build": "lerna run build --scope frontend",
+    "next-start": "lerna run start --scope frontend",
+    "next-dev": "lerna run dev --scope frontend",
+    "contract-compile": "lerna run hardhat compile --scope contracts",
+    "contract-test": "lerna run hardhat test --scope contracts",
+    "contract-deploy": "lerna run hardhat run scripts/deploy.ts --scope contracts"
+  }
+}
