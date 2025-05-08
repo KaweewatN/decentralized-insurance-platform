@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { ethers } from 'ethers';
 import * as cron from 'node-cron';
-import * as PriceOracle from '../../abis/PriceOracle.json';
+import * as PriceOracle from '../../../abis/PriceOracle.json';
 
 @Injectable()
 export class OracleService implements OnModuleInit {
@@ -21,7 +21,7 @@ export class OracleService implements OnModuleInit {
   }
 
   private initialize() {
-    const rpcUrl = this.configService.get<string>('SEPOLIA_RPC');
+    const rpcUrl = this.configService.get<string>('INFURA_URL');
     const privateKey = this.configService.get<string>('PRIVATE_KEY');
     const oracleAddress = this.configService.get<string>(
       'ORACLE_CONTRACT_ADDRESS',
