@@ -23,7 +23,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  // Removed isConnected
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [walletAddress, setWalletAddress] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -31,36 +31,11 @@ export default function DashboardLayout({
 
   const pathname = usePathname();
 
-  // Mock wallet connection
-  const connectWallet = async () => {
-    // This would be replaced with actual wallet connection logic
-    setIsLoading(true);
-
-    // Simulate connection delay
-    setTimeout(() => {
-      const mockAddress = "0xA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0";
-      setWalletAddress(mockAddress);
-      setIsConnected(true);
-
-      // Check if user is admin
-      checkIsAdmin(mockAddress).then((admin) => {
-        setIsAdmin(admin);
-        setIsLoading(false);
-      });
-    }, 1000);
-  };
-
-  // Disconnect wallet
-  const disconnectWallet = () => {
-    setIsConnected(false);
-    setIsAdmin(false);
-    setWalletAddress("");
-  };
+  // Removed connectWallet and disconnectWallet
 
   // Simulate checking wallet connection on page load
   useEffect(() => {
     const checkConnection = async () => {
-      // This would check if wallet is already connected
       setIsLoading(true);
       setTimeout(() => {
         setIsLoading(false);
@@ -116,48 +91,23 @@ export default function DashboardLayout({
 
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            {isConnected && (
-              <>
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "text-sm font-medium transition-colors hover:text-primary",
-                      pathname === item.href
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </>
-            )}
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  pathname === item.href
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                )}
+              >
+                {item.name}
+              </Link>
+            ))}
           </nav>
 
-          <div className="flex items-center gap-4">
-            {isConnected ? (
-              <div className="flex items-center gap-4">
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium">
-                    {walletAddress.substring(0, 6)}...
-                    {walletAddress.substring(walletAddress.length - 4)}
-                  </p>
-                  {isAdmin && (
-                    <span className="text-xs text-primary">Admin</span>
-                  )}
-                </div>
-                <Button variant="outline" onClick={disconnectWallet}>
-                  Disconnect
-                </Button>
-              </div>
-            ) : (
-              <Button onClick={connectWallet} disabled={isLoading}>
-                {isLoading ? "Connecting..." : "Connect Wallet"}
-              </Button>
-            )}
-          </div>
+          {/* Removed wallet connect/disconnect UI */}
         </div>
       </header>
 
@@ -165,29 +115,23 @@ export default function DashboardLayout({
       {isMobileMenuOpen && (
         <div className="md:hidden border-b">
           <nav className="container py-4">
-            {isConnected ? (
-              <div className="flex flex-col space-y-3">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "text-sm font-medium transition-colors hover:text-primary",
-                      pathname === item.href
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    )}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Connect your wallet to access the dashboard
-              </p>
-            )}
+            <div className="flex flex-col space-y-3">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    pathname === item.href
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  )}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
           </nav>
         </div>
       )}
@@ -206,23 +150,8 @@ export default function DashboardLayout({
               <Skeleton className="h-[400px] rounded-xl" />
             </div>
           </div>
-        ) : isConnected ? (
-          children
         ) : (
-          <div className="container py-16 text-center">
-            <div className="max-w-md mx-auto space-y-6">
-              <h1 className="text-3xl font-bold">
-                Welcome to ChainSure Dashboard
-              </h1>
-              <p className="text-muted-foreground">
-                Connect your wallet to access your insurance policies, file
-                claims, and manage your coverage.
-              </p>
-              <Button size="lg" onClick={connectWallet}>
-                Connect Wallet
-              </Button>
-            </div>
-          </div>
+          children
         )}
       </main>
 
