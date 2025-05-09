@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
+
+/// @title PolicyBase
+/// @notice Abstract base contract defining the interface and common structures for insurance plans
+/// @dev This contract provides standardized user, policy, and claim data models.
+///      It defines core virtual functions (e.g., purchase, claim, refund) that must be implemented
+///      by concrete insurance plans (like LifeGuard99, SmartReturn806, etc).
+///      Also emits standardized events to support cross-plan interoperability and audit logging.
+
 
 abstract contract PolicyBase {
     struct UserProfile {
@@ -13,7 +21,7 @@ abstract contract PolicyBase {
 
     struct Policy {
         uint256 premium;
-        uint256 sumAssured; // ✅ Added sumAssured
+        uint256 sumAssured; 
         uint256 claimAmount;
         uint256 expiry;
         bool isActive;

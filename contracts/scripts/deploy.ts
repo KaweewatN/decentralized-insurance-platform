@@ -6,14 +6,12 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 async function main() {
-  const log = (message: string) => console.log(message);
+  const log = (msg: string) => console.log(msg);
 
   const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC);
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
-
   log(`📤 Deploying from: ${wallet.address}`);
 
-  // === Load compiled ABI + bytecode ===
   const loadContract = (name: string) => {
     const artifactPath = path.resolve(
       __dirname,
@@ -23,82 +21,90 @@ async function main() {
     return new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
   };
 
-  // === Deploy contracts ===
+  // === Deploy Oracle ===
   const oracleFactory = loadContract("PriceOracle");
-  const oracle = await oracleFactory.deploy(wallet.address);
+  const oracle = await oracleFactory.deploy(wallet.address, wallet.address); // owner และ updater เป็น address เดียวกัน
   await oracle.waitForDeployment();
   const oracleAddress = await oracle.getAddress();
-  log(`✅ PriceOracle deployed to: ${oracleAddress}`);
+  log(`✅ PriceOracle deployed at: ${oracleAddress}`);
 
-  const lifeguardFactory = loadContract("LifeGuard99");
-  const lifeguard = await lifeguardFactory.deploy(
-    wallet.address,
-    oracleAddress
-  );
-  await lifeguard.waitForDeployment();
-  const lifeguardAddress = await lifeguard.getAddress();
-  log(`✅ LifeGuard99 deployed to: ${lifeguardAddress}`);
+  // === Deploy Vault ===
+  const vaultFactory = loadContract("InsuranceVault");
+  const vault = await vaultFactory.deploy(wallet.address);
+  await vault.waitForDeployment();
+  const vaultAddress = await vault.getAddress();
+  log(`✅ InsuranceVault deployed at: ${vaultAddress}`);
 
-  const smartReturnFactory = loadContract("SmartReturn806");
-  const smartreturn = await smartReturnFactory.deploy(
-    wallet.address,
-    oracleAddress
-  );
-  await smartreturn.waitForDeployment();
-  const smartreturnAddress = await smartreturn.getAddress();
-  log(`✅ SmartReturn806 deployed to: ${smartreturnAddress}`);
+  // === Deploy Insurance Plans ===
+  const deployPlan = async (name: string) => {
+    const factory = loadContract(name);
+    const contract = await factory.deploy(
+      wallet.address,
+      oracleAddress,
+      vaultAddress
+    );
+    await contract.waitForDeployment();
+    const address = await contract.getAddress();
+    log(`✅ ${name} deployed at: ${address}`);
+    return address;
+  };
 
-  const insuranceManagerFactory = loadContract("InsuranceManager");
-  const manager = await insuranceManagerFactory.deploy(
+  const lifePlusAddr = await deployPlan("LifeCarePlus");
+  const lifeLiteAddr = await deployPlan("LifeCareLite");
+  const healthPlusAddr = await deployPlan("HealthCarePlus");
+  const healthLiteAddr = await deployPlan("HealthCareLite");
+
+  // === Deploy Central Manager ===
+  const managerFactory = loadContract("LifeHealthInsuranceManager");
+  const manager = await managerFactory.deploy(
     wallet.address,
-    lifeguardAddress,
-    smartreturnAddress
+    lifePlusAddr,
+    lifeLiteAddr,
+    healthPlusAddr,
+    healthLiteAddr,
+    vaultAddress
   );
   await manager.waitForDeployment();
   const managerAddress = await manager.getAddress();
-  log(`✅ InsuranceManager deployed to: ${managerAddress}`);
+  log(`✅ LifeHealthInsuranceManager deployed at: ${managerAddress}`);
 
-  // === Export ABI + address ===
+  // === Export to frontend + backend
   const frontendPath = path.resolve(__dirname, "../../apps/frontend/abis");
-  if (!fs.existsSync(frontendPath)) {
-    fs.mkdirSync(frontendPath, { recursive: true });
-  }
-
   const backendPath = path.resolve(__dirname, "../../apps/backend/abis");
-  if (!fs.existsSync(backendPath)) {
-    fs.mkdirSync(backendPath, { recursive: true });
+  for (const dir of [frontendPath, backendPath]) {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   }
 
   const exportABI = (name: string, address: string) => {
     const artifactPath = path.resolve(
       __dirname,
-      `../../artifacts/contracts/${name}.sol/${name}.json`
+      `../artifacts/contracts/${name}.sol/${name}.json`
     );
     const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 
-    // Export to frontend
-    const frontendOutPath = path.join(frontendPath, `${name}.json`);
-    fs.writeFileSync(
-      frontendOutPath,
-      JSON.stringify({ address, abi: artifact.abi }, null, 2)
-    );
-    log(`📄 Exported to frontend: ${name}.json`);
+    const exportPaths = {
+      frontend: path.join(frontendPath, `${name}.json`),
+      backend: path.join(backendPath, `${name}.json`),
+    };
 
-    // Export to backend
-    const backendOutPath = path.join(backendPath, `${name}.json`);
-    fs.writeFileSync(
-      backendOutPath,
-      JSON.stringify({ address, abi: artifact.abi }, null, 2)
-    );
-    log(`📄 Exported to backend: ${name}.json`);
+    for (const [label, outputPath] of Object.entries(exportPaths)) {
+      fs.writeFileSync(
+        outputPath,
+        JSON.stringify({ address, abi: artifact.abi }, null, 2)
+      );
+      log(`📄 Exported to ${label}: ${name}.json`);
+    }
   };
 
   exportABI("PriceOracle", oracleAddress);
-  exportABI("LifeGuard99", lifeguardAddress);
-  exportABI("SmartReturn806", smartreturnAddress);
-  exportABI("InsuranceManager", managerAddress);
+  exportABI("InsuranceVault", vaultAddress);
+  exportABI("LifeCarePlus", lifePlusAddr);
+  exportABI("LifeCareLite", lifeLiteAddr);
+  exportABI("HealthCarePlus", healthPlusAddr);
+  exportABI("HealthCareLite", healthLiteAddr);
+  exportABI("LifeHealthInsuranceManager", managerAddress);
 
-  log("✅ ABI & address exported to frontend/abis/ and backend/abis/");
+  log("✅ All contracts deployed & exported to frontend/backend abis/");
 }
 
 main().catch((err) => {
