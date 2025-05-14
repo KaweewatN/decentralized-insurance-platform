@@ -17,7 +17,7 @@ export class FlightInsuranceController {
   constructor(
     private readonly flightInsuranceService: FlightInsuranceService,
     private readonly supabaseService: SupabaseService,
-  ) { }
+  ) {}
 
   @Get('estimate-premium')
   async estimatePremium(
@@ -54,6 +54,8 @@ export class FlightInsuranceController {
     return { message: 'Upload successful', url };
   }
 
+  // Submitting the application from user
+  // stores the application in the database
   @Post('submit-application')
   async submitApplication(@Body() body: any) {
     return this.flightInsuranceService.submitApplication(body);
@@ -75,31 +77,29 @@ export class FlightInsuranceController {
     @Body('policyIdOnChain') policyIdOnChain: number,
     @Body('transactionHash') transactionHash: string,
   ) {
-    return this.flightInsuranceService.confirmPayment(applicationId, policyIdOnChain, transactionHash);
+    return this.flightInsuranceService.confirmPayment(
+      applicationId,
+      policyIdOnChain,
+      transactionHash,
+    );
   }
 
   @Get('is-approved')
   async checkApproval(@Query('applicationId') applicationId: string) {
-    const isApproved = await this.flightInsuranceService.isApplicationApproved(applicationId);
+    const isApproved =
+      await this.flightInsuranceService.isApplicationApproved(applicationId);
     return { approved: isApproved };
   }
 
   @Post('generate-signature')
-async generateSignature(@Body() body: any) {
-  const { flightNumber, coveragePerPerson, numPersons, totalPremium } = body;
+  async generateSignature(@Body() body: any) {
+    const { flightNumber, coveragePerPerson, numPersons, totalPremium } = body;
 
-  return this.flightInsuranceService.generateSignature(
-    flightNumber,
-    coveragePerPerson,
-    numPersons,
-    totalPremium,
-  );
+    return this.flightInsuranceService.generateSignature(
+      flightNumber,
+      coveragePerPerson,
+      numPersons,
+      totalPremium,
+    );
+  }
 }
-
-
-
-
-}
-
-
-

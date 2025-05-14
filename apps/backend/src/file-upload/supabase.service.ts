@@ -17,8 +17,11 @@ export class SupabaseService {
     return this.supabase;
   }
 
-  async uploadDocument(file: Express.Multer.File, userId: string): Promise<string> {
-    const bucket = 'documents';
+  async uploadDocument(
+    file: Express.Multer.File,
+    userId: string,
+  ): Promise<string> {
+    const bucket = 'flight-insurance-document';
     const filePath = `${userId}/${Date.now()}-${file.originalname}`;
 
     const { error } = await this.supabase.storage
@@ -39,4 +42,3 @@ export class SupabaseService {
     return publicUrlData.publicUrl;
   }
 }
-

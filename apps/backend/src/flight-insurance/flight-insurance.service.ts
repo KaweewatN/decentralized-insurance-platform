@@ -2,67 +2,29 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../file-upload/supabase.service';
-import { ethers } from 'ethers';
 import { Wallet, AbiCoder, keccak256, getBytes } from 'ethers';
 import { randomUUID } from 'crypto';
+
+import {
+  airlineRisk,
+  airportRisk,
+  holidayMap,
+  weatherRiskMap,
+} from './data/flight-insurance.data';
 
 const mockApplications: Record<string, any> = {};
 
 @Injectable()
 export class FlightInsuranceService {
-  constructor(private readonly supabaseService: SupabaseService,
-    private readonly configService: ConfigService
-  ) { }
-  private airlineRisk: Record<string, number> = {
-    TG: 0.3,  // Thai Airways
-    EK: 0.25, // Emirates
-    AA: 0.2,  // American Airlines
-    JL: 0.22, // Japan Airlines
-    QR: 0.18, // Qatar Airways
-    SQ: 0.15, // Singapore Airlines
-    MH: 0.28, // Malaysia Airlines
-  };
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {}
 
-  private airportRisk: Record<string, number> = {
-    BKK: 0.25, // Suvarnabhumi
-    JFK: 0.2,  // New York
-    NRT: 0.18, // Narita
-    LAX: 0.15, // Los Angeles
-    HND: 0.1,  // Tokyo Haneda
-    SIN: 0.12, // Singapore Changi
-    DXB: 0.16, // Dubai
-    LHR: 0.22, // London Heathrow
-  };
-
-  private holidayMap: Record<string, { start: string; end: string }[]> = {
-    JP: [
-      { start: '2025-04-27', end: '2025-05-06' }, // Golden Week
-      { start: '2025-12-28', end: '2026-01-03' }, // New Year
-    ],
-    TH: [
-      { start: '2025-04-12', end: '2025-04-16' }, // Songkran
-    ],
-    KR: [
-      { start: '2025-09-07', end: '2025-09-11' }, // Chuseok
-    ],
-    US: [
-      { start: '2025-11-27', end: '2025-11-28' }, // Thanksgiving
-      { start: '2025-12-24', end: '2025-12-26' }, // Christmas
-    ],
-  };
-
-  private weatherRiskMap: Record<string, { monthRange: [number, number]; risk: number }[]> = {
-    JP: [
-      { monthRange: [1, 2], risk: 0.3 },   // Snow season
-      { monthRange: [7, 9], risk: 0.25 },  // Typhoon season
-    ],
-    TH: [
-      { monthRange: [6, 10], risk: 0.2 },  // Rainy season
-    ],
-    US: [
-      { monthRange: [12, 2], risk: 0.25 }, // Winter season
-    ],
-  };
+  private airlineRisk = airlineRisk;
+  private airportRisk = airportRisk;
+  private holidayMap = holidayMap;
+  private weatherRiskMap = weatherRiskMap;
 
   private getCalendarRisk(countryCode: string, date: string): number {
     const holidays = this.holidayMap[countryCode] || [];
@@ -97,7 +59,11 @@ export class FlightInsuranceService {
     return 0.1; // morning
   }
 
-  private calculatePremium(coverageAmount: number, probability: number, riskLoading = 1.2): number {
+  private calculatePremium(
+    coverageAmount: number,
+    probability: number,
+    riskLoading = 1.2,
+  ): number {
     return coverageAmount * probability * riskLoading;
   }
 
@@ -110,7 +76,7 @@ export class FlightInsuranceService {
     depCountry: string,
     arrCountry: string,
     coverageAmount: number,
-    numPersons: number
+    numPersons: number,
   ) {
     const airlineScore = this.airlineRisk[airline] ?? 0.2;
     const depAirportScore = this.airportRisk[depAirport] ?? 0.2;
@@ -158,17 +124,18 @@ export class FlightInsuranceService {
       ...body,
       id,
       status: 'PendingApproval',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
     mockApplications[id] = newApplication;
+
+    console.log(mockApplications);
 
     return {
       message: 'Application submitted successfully',
       applicationId: id,
-      status: newApplication.status
+      status: newApplication.status,
     };
   }
-
 
   // ✅ Mocked: approve application
   async approveApplication(applicationId: string) {
@@ -185,15 +152,22 @@ export class FlightInsuranceService {
     return app.status === 'Approved';
   }
 
-
   // ✅ Logic check only
-  async verifyAndPay(applicationId: string): Promise<{ eligible: boolean; reason?: string }> {
+  async verifyAndPay(
+    applicationId: string,
+  ): Promise<{ eligible: boolean; reason?: string }> {
     const isApproved = await this.isApplicationApproved(applicationId);
-    return isApproved ? { eligible: true } : { eligible: false, reason: 'Application not approved' };
+    return isApproved
+      ? { eligible: true }
+      : { eligible: false, reason: 'Application not approved' };
   }
 
   // ✅ Mocked: confirm payment
-  async confirmPayment(applicationId: string, policyIdOnChain: number, transactionHash: string) {
+  async confirmPayment(
+    applicationId: string,
+    policyIdOnChain: number,
+    transactionHash: string,
+  ) {
     const app = mockApplications[applicationId];
     if (!app) throw new Error('Application not found');
     app.status = 'Paid';
@@ -208,9 +182,11 @@ export class FlightInsuranceService {
     flightNumber: string,
     coveragePerPerson: number,
     numPersons: number,
-    scaledPremium: number
+    scaledPremium: number,
   ): Promise<string> {
-    const privateKey = this.configService.get<string>('BACKEND_SIGNER_PRIVATE_KEY');
+    const privateKey = this.configService.get<string>(
+      'BACKEND_SIGNER_PRIVATE_KEY',
+    );
     if (!privateKey) throw new Error('Private key not found');
 
     const signer = new Wallet(privateKey);
@@ -218,7 +194,7 @@ export class FlightInsuranceService {
 
     const encoded = abiCoder.encode(
       ['string', 'uint256', 'uint256', 'uint256'],
-      [flightNumber, coveragePerPerson, numPersons, scaledPremium]
+      [flightNumber, coveragePerPerson, numPersons, scaledPremium],
     );
 
     const messageHash = keccak256(encoded);
@@ -231,7 +207,7 @@ export class FlightInsuranceService {
     flightNumber: string,
     coveragePerPerson: number,
     numPersons: number,
-    totalPremium: number // 💰 e.g., 54.12
+    totalPremium: number, // 💰 e.g., 54.12
   ): Promise<{ signature: string; scaledPremium: number }> {
     const scaledPremium = Math.round(totalPremium); // Convert float to integer for Solidity compatibility
 
@@ -239,7 +215,7 @@ export class FlightInsuranceService {
       flightNumber,
       coveragePerPerson,
       numPersons,
-      scaledPremium
+      scaledPremium,
     );
 
     return {
@@ -247,9 +223,4 @@ export class FlightInsuranceService {
       scaledPremium, // Return integer value used in signature
     };
   }
-
 }
-
-
-
-
