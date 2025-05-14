@@ -4,6 +4,7 @@ import axios from 'axios';
 import { ethers } from 'ethers';
 import * as cron from 'node-cron';
 import * as PriceOracle from '../../abis/PriceOracle.json';
+//import * as FlightInsuranceABI from '../../abis/FlightInsurance.json';
 
 @Injectable()
 export class OracleService implements OnModuleInit {
@@ -15,9 +16,9 @@ export class OracleService implements OnModuleInit {
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
-    this.initialize();
-    this.scheduleCronJob();
-    this.updatePriceToContract(); // Run once at startup
+    //this.initialize();
+    //this.scheduleCronJob();
+    //this.updatePriceToContract(); // Run once at startup
   }
 
   private initialize() {
@@ -97,4 +98,34 @@ export class OracleService implements OnModuleInit {
       this.updatePriceToContract();
     });
   }
+
+  //async mockProcessFlightStatus(policyId: number): Promise<{ success: boolean; delayMinutes: number }> {
+    //const delayMinutes = Math.floor(Math.random() * 400); // Random delay from 0 to 399
+  
+    // Connect to deployed FlightInsurance contract
+    //const flightInsuranceAddress = this.configService.get<string>('FLIGHT_CONTRACT_ADDRESS');
+    //const abi = [ // Only need the function you call
+      //'function processFlightStatus(uint256,uint256) external',
+    //];
+  
+    //const contract = new ethers.Contract(flightInsuranceAddress, abi, this.wallet);
+  
+    // Send transaction to simulate oracle call
+    //const tx = await contract.processFlightStatus(policyId, delayMinutes);
+    //await tx.wait();
+  
+    //this.logger.log(`✈️ Mock processed: Policy #${policyId}, Delay = ${delayMinutes} mins`);
+  
+    //return {
+      //success: true,
+      //delayMinutes,
+    //};
+  //}
+  mockProcessFlightStatus(policyId: number) {
+    const delayMinutes = Math.floor(Math.random() * 400);
+    return { success: true, delayMinutes };
+  }
+  
+  
+  
 }

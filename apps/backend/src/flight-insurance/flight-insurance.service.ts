@@ -2,10 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../file-upload/supabase.service';
+import { ethers } from 'ethers';
+import { Wallet, AbiCoder, keccak256, getBytes } from 'ethers';
+import { randomUUID } from 'crypto';
+
+const mockApplications: Record<string, any> = {};
 
 @Injectable()
 export class FlightInsuranceService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService
+  ) { }
   private airlineRisk: Record<string, number> = {
     TG: 0.3,  // Thai Airways
     EK: 0.25, // Emirates
@@ -25,7 +32,7 @@ export class FlightInsuranceService {
     SIN: 0.12, // Singapore Changi
     DXB: 0.16, // Dubai
     LHR: 0.22, // London Heathrow
-  };  
+  };
 
   private holidayMap: Record<string, { start: string; end: string }[]> = {
     JP: [
@@ -103,6 +110,7 @@ export class FlightInsuranceService {
     depCountry: string,
     arrCountry: string,
     coverageAmount: number,
+    numPersons: number
   ) {
     const airlineScore = this.airlineRisk[airline] ?? 0.2;
     const depAirportScore = this.airportRisk[depAirport] ?? 0.2;
@@ -125,11 +133,13 @@ export class FlightInsuranceService {
       0.1 * calendarScore +
       0.15 * weatherScore;
 
-    const premium = this.calculatePremium(coverageAmount, probability);
+    const premiumPerPerson = this.calculatePremium(coverageAmount, probability);
+    const totalPremium = premiumPerPerson * numPersons;
 
     return {
       probability: +probability.toFixed(3),
-      estimatedPremium: +premium.toFixed(2),
+      premiumPerPerson: +premiumPerPerson.toFixed(2),
+      totalPremium: +totalPremium.toFixed(2),
       breakdown: {
         airlineScore,
         depAirportScore,
@@ -140,82 +150,103 @@ export class FlightInsuranceService {
       },
     };
   }
+
+  // ✅ Mocked: submit application
   async submitApplication(body: any) {
-    const {
-      user_address,
-      airline,
-      flight_number,
-      dep_airport,
-      arr_airport,
-      dep_time,
-      flight_date,
-      dep_country,
-      arr_country,
-      coverage_amount,
-      premium,
-      ticket_url,
-    } = body;
-  
-    const { data, error } = await this.supabaseService.client
-    .from('flight_applications')
-    .insert([
-      {
-        user_address,
-        airline,
-        flight_number,
-        dep_airport,
-        arr_airport,
-        dep_time,
-        flight_date,
-        dep_country,
-        arr_country,
-        coverage_amount,
-        premium,
-        ticket_url,
-        status: 'PendingApproval',
-        created_at: new Date().toISOString(),
-      },
-    ])
-    .select('id'); // Tell Supabase to return the id
-  
-  if (error) {
-    throw new Error(`Database insert failed: ${error.message}`);
+    const id = randomUUID();
+    const newApplication = {
+      ...body,
+      id,
+      status: 'PendingApproval',
+      created_at: new Date().toISOString()
+    };
+    mockApplications[id] = newApplication;
+
+    return {
+      message: 'Application submitted successfully',
+      applicationId: id,
+      status: newApplication.status
+    };
   }
-  
-  return {
-    message: 'Application submitted successfully',
-    applicationId: data?.[0]?.id, 
-  };
-  
-  }
-  
+
+
+  // ✅ Mocked: approve application
   async approveApplication(applicationId: string) {
-    const { data, error } = await this.supabaseService.client
-      .from('flight_applications')
-      .update({ status: 'Approved' })
-      .eq('id', applicationId);
-  
-    if (error) throw new Error(error.message);
-    return { message: 'Application approved', data };
+    const app = mockApplications[applicationId];
+    if (!app) throw new Error('Application not found');
+    app.status = 'Approved';
+    return { message: 'Application approved', data: [app] };
   }
-  
-  async verifyAndPayEligibility(applicationId: string) {
-    const { data, error } = await this.supabaseService.client
-      .from('flight_applications')
-      .select('status')
-      .eq('id', applicationId)
-      .single();
-  
-    if (error) {
-      throw new Error(`Database fetch failed: ${error.message}`);
-    }
-  
-    if (data.status === 'Approved') {
-      return { eligible: true };
-    } else {
-      return { eligible: false, reason: 'Application is not approved yet.' };
-    }
-  }  
+
+  // ✅ Mocked: check approval
+  async isApplicationApproved(applicationId: string): Promise<boolean> {
+    const app = mockApplications[applicationId];
+    if (!app) throw new Error('Application not found');
+    return app.status === 'Approved';
+  }
+
+
+  // ✅ Logic check only
+  async verifyAndPay(applicationId: string): Promise<{ eligible: boolean; reason?: string }> {
+    const isApproved = await this.isApplicationApproved(applicationId);
+    return isApproved ? { eligible: true } : { eligible: false, reason: 'Application not approved' };
+  }
+
+  // ✅ Mocked: confirm payment
+  async confirmPayment(applicationId: string, policyIdOnChain: number, transactionHash: string) {
+    const app = mockApplications[applicationId];
+    if (!app) throw new Error('Application not found');
+    app.status = 'Paid';
+    app.policy_id_on_chain = policyIdOnChain;
+    app.transaction_hash = transactionHash;
+    app.policy_created_at = new Date().toISOString();
+    return { message: 'Payment confirmed and policy recorded on-chain.' };
+  }
+
+  /// 🔐 Internal signer for hashed message (used by generateSignature)
+  async signPremium(
+    flightNumber: string,
+    coveragePerPerson: number,
+    numPersons: number,
+    scaledPremium: number
+  ): Promise<string> {
+    const privateKey = this.configService.get<string>('BACKEND_SIGNER_PRIVATE_KEY');
+    if (!privateKey) throw new Error('Private key not found');
+
+    const signer = new Wallet(privateKey);
+    const abiCoder = new AbiCoder();
+
+    const encoded = abiCoder.encode(
+      ['string', 'uint256', 'uint256', 'uint256'],
+      [flightNumber, coveragePerPerson, numPersons, scaledPremium]
+    );
+
+    const messageHash = keccak256(encoded);
+    const signature = await signer.signMessage(getBytes(messageHash));
+    return signature;
+  }
+
+  // 🚀 Public API: sign the premium after rounding
+  async generateSignature(
+    flightNumber: string,
+    coveragePerPerson: number,
+    numPersons: number,
+    totalPremium: number // 💰 e.g., 54.12
+  ): Promise<{ signature: string; scaledPremium: number }> {
+    const scaledPremium = Math.round(totalPremium); // Convert float to integer for Solidity compatibility
+
+    const signature = await this.signPremium(
+      flightNumber,
+      coveragePerPerson,
+      numPersons,
+      scaledPremium
+    );
+
+    return {
+      signature,
+      scaledPremium, // Return integer value used in signature
+    };
+  }
 
 }
 
