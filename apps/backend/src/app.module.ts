@@ -3,13 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OracleFlightModule } from './module/oracle-flight/oracle-flight.module';
-import { FlightInsuranceController } from './module/flight-insurance/flight-insurance.controller';
-import { FileUploadController } from './module/file-upload/file-upload.controller';
-import { OracleController } from './module/oracle/oracle.controller';
-import { FlightInsuranceService } from './module/flight-insurance/flight-insurance.service';
-import { SupabaseService } from './module/file-upload/supabase.service';
-import { OracleService } from './module/oracle/oracle.service';
-import { PolicyCleanupService } from './module/flight-insurance/policy-cleanup.service';
+import { FlightInsuranceModule } from './module/flight-insurance/flight-insurance.module';
 import { PriceModule } from './module/price/price.module';
 import { OracleModule } from './module/oracle/oracle.module';
 import { WalletModule } from './module/wallet/wallet.module';
@@ -25,22 +19,12 @@ import { AuthModule } from './module/auth/auth.module';
     MulterModule.register({}),
     ScheduleModule.forRoot(),
     OracleFlightModule,
-  ],
-  controllers: [
-    FlightInsuranceController,
-    FileUploadController,
-    OracleController,
-  ],
-  providers: [
-    FlightInsuranceService,
-    SupabaseService,
-    OracleService,
-    PolicyCleanupService,
     PriceModule,
     OracleModule,
     WalletModule,
     AuthModule,
     PrismaModule,
+    FlightInsuranceModule,
   ],
 })
 export class AppModule {}

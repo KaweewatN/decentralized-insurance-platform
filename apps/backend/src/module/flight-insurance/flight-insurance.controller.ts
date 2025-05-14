@@ -6,7 +6,9 @@ import {
   UploadedFile,
   UseInterceptors,
   Body,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtGuard } from 'src/module/auth/guards';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FlightInsuranceService } from './flight-insurance.service';
 import { SupabaseService } from '../file-upload/supabase.service';
@@ -20,6 +22,7 @@ export class FlightInsuranceController {
   ) {}
 
   @Get('estimate-premium')
+  @UseGuards(JwtGuard)
   async estimatePremium(
     @Query('airline') airline: string,
     @Query('depAirport') depAirport: string,
@@ -45,6 +48,7 @@ export class FlightInsuranceController {
   }
 
   @Post('upload-ticket')
+  @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadTicket(
     @UploadedFile() file: Express.Multer.File,
