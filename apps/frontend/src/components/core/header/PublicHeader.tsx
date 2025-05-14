@@ -31,16 +31,16 @@ export default function PublicHeader() {
             Benefits
           </Link>
           <Link
-            href="/pools"
-            className="text-sm font-medium hover:text-primary"
-          >
-            Insurance Pools
-          </Link>
-          <Link
             href="/#security"
             className="text-sm font-medium hover:text-primary"
           >
             Security
+          </Link>
+          <Link
+            href="/pools"
+            className="text-sm font-medium hover:text-primary"
+          >
+            Insurance Pools
           </Link>
           {session?.user?.role === "USER" && (
             <Link

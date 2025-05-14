@@ -32,11 +32,11 @@ export class Web3Service {
         wallet: this.config.wallet,
         balance: {
           ether: {
-            value: balanceInEther,
+            value: Number(balanceInEther),
             unit: 'ether',
           },
           wei: {
-            value: balanceInWei,
+            value: Number(balanceInWei),
             unit: 'wei',
           },
         },
@@ -51,11 +51,26 @@ export class Web3Service {
       'latest',
     );
 
+    // Get current gas fees for EIP-1559
+    const feeData = await this.web3.eth.getBlock('pending');
+    const priorityFee = this.web3.utils.toWei('2', 'gwei');
+    const baseFee = feeData.baseFeePerGas ?? '0';
+
+    // Ensure maxFeePerGas >= maxPriorityFeePerGas
+    let maxPriorityFeePerGas = BigInt(priorityFee);
+    let maxFeePerGas = BigInt(baseFee) + maxPriorityFeePerGas;
+    if (maxFeePerGas < maxPriorityFeePerGas) {
+      maxFeePerGas = maxPriorityFeePerGas;
+    }
+
     const transaction = {
       to: toWallet,
-      value,
+      value: this.web3.utils.toHex(value), // value should be in wei
       gas: 21000,
       nonce,
+      maxPriorityFeePerGas: this.web3.utils.toHex(maxPriorityFeePerGas),
+      maxFeePerGas: this.web3.utils.toHex(maxFeePerGas),
+      type: 2,
     };
 
     const signedTx = await this.web3.eth.accounts.signTransaction(
@@ -64,9 +79,22 @@ export class Web3Service {
     );
 
     const tx = await this.web3.eth.sendSignedTransaction(
-      signedTx.rawTransaction,
+      signedTx.rawTransaction as string,
     );
 
-    return tx.transactionHash;
+    return {
+      status: 'success',
+      data: {
+        transactionHash: tx.transactionHash?.toString(),
+        blockHash: tx.blockHash?.toString(),
+        blockNumber: tx.blockNumber?.toString(),
+        from: tx.from?.toString(),
+        to: tx.to?.toString(),
+        value: value,
+        unit: 'wei',
+        gasUsed: tx.gasUsed?.toString(),
+      },
+      timestamp: new Date().toISOString(),
+    };
   }
 }

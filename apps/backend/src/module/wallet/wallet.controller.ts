@@ -17,7 +17,7 @@ export class WalletController {
     return this.walletService.getAccount();
   }
 
-  @Post()
+  @Post('transfer')
   @UseGuards(JwtGuard)
   setTransfer(
     @Body('toWallet') toWallet: string,
