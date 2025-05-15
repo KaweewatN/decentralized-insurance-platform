@@ -21,7 +21,7 @@ export class OracleService implements OnModuleInit {
   }
 
   private initialize() {
-    const rpcUrl = this.configService.get<string>('INFURA_URL');
+    const rpcUrl = this.configService.get<string>('SEPOLIA_RPC');
     const privateKey = this.configService.get<string>('PRIVATE_KEY');
     const oracleAddress = this.configService.get<string>(
       'ORACLE_CONTRACT_ADDRESS',

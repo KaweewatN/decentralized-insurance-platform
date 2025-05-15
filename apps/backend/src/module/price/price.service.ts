@@ -12,7 +12,7 @@ export class PriceService {
   private contract: ethers.Contract;
 
   constructor(private readonly configService: ConfigService) {
-    const rpcUrl = this.configService.get<string>('INFURA_URL');
+    const rpcUrl = this.configService.get<string>('SEPOLIA_RPC');
     const privateKey = this.configService.get<string>('PRIVATE_KEY');
     const contractAddress = this.configService.get<string>(
       'ORACLE_CONTRACT_ADDRESS',
@@ -20,7 +20,7 @@ export class PriceService {
 
     if (!rpcUrl || !privateKey || !contractAddress) {
       throw new Error(
-        '❌ Missing .env: INFURA_URL, PRIVATE_KEY, ORACLE_CONTRACT_ADDRESS',
+        '❌ Missing .env: SEPOLIA_RPC, PRIVATE_KEY, ORACLE_CONTRACT_ADDRESS',
       );
     }
 

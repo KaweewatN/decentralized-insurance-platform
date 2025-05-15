@@ -13,7 +13,7 @@ import { Web3Service } from './web3.service';
       scope: Scope.REQUEST, // Make this provider request-scoped
       useFactory: (configService: ConfigService, request: Request) => {
         const userInfuraUrl = request.headers['infura-url'] as string; // Example: Retrieve from request headers
-        return new Web3(userInfuraUrl || configService.get('INFURA_URL'));
+        return new Web3(userInfuraUrl || configService.get('SEPOLIA_RPC'));
       },
       inject: [ConfigService, REQUEST],
     },
