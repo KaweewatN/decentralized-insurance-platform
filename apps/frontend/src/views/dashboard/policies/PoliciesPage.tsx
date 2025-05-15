@@ -64,13 +64,14 @@ export default function PoliciesPage({
 
     // Sort policies
     if (filters.sort === "purchase-date") {
-      result = result.sort((a, b) => a.id.localeCompare(b.id));
+      result = result.sort((a, b) => String(a.id).localeCompare(String(b.id)));
     } else if (filters.sort === "expiry-date") {
-      result = result.sort((a, b) => a.endDate.localeCompare(b.endDate));
+      result = result.sort((a, b) =>
+        String(a.endDate).localeCompare(String(b.endDate))
+      );
     } else if (filters.sort === "policy-id") {
-      result = result.sort((a, b) => a.id.localeCompare(b.id));
+      result = result.sort((a, b) => Number(a.id) - Number(b.id));
     }
-
     setFilteredPolicies(result);
     setCurrentPage(1); // Reset to first page when filters change
   };

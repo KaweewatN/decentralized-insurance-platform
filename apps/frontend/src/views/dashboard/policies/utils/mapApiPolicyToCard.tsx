@@ -3,7 +3,7 @@ import { PolicyCardProps } from "../types/policies.types";
 export default function mapApiPolicyToCard(policy: any): PolicyCardProps {
   // Map API fields to PolicyCardProps fields
   return {
-    id: `CS-POL-${policy.id.toString().padStart(5, "0")}`,
+    id: policy.id,
     type:
       policy.planTypeId === 1
         ? "health"

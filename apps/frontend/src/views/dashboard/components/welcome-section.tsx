@@ -8,7 +8,7 @@ export default function WelcomeSection({ walletAddress }: WelcomeSectionProps) {
   // Function to shorten wallet address
   const shortenAddress = (address?: string) => {
     if (!address || address.length < 10) return address || "Not connected";
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+    return `${address}`;
   };
 
   return (

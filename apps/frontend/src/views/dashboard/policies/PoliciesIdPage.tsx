@@ -36,11 +36,11 @@ import { PolicyDetailsProps } from "@/views/dashboard/policies/types/policies.ty
 
 export default function PoliciesIdPage({
   walletAddress,
+  policyId,
 }: {
   walletAddress: string;
+  policyId: string;
 }) {
-  const params = useParams();
-  const { id } = params;
   const [policy, setPolicy] = useState<PolicyDetailsProps | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,19 +51,22 @@ export default function PoliciesIdPage({
         setLoading(true);
         setError(null);
         const res = await fetch(
-          `http://localhost:3001/api/user/policy?walletAddress=${walletAddress}`
+          `http://localhost:3001/api/user/policy?walletAddress=${walletAddress}&policyId=${policyId}`
         );
         const data = await res.json();
-        const found = Array.isArray(data)
-          ? data.find(
-              (p: any) => `CS-POL-${p.id.toString().padStart(5, "0")}` === id
-            )
-          : null;
+        console.log("API response:", data);
+        let found = null;
+        if (Array.isArray(data)) {
+          found = data[0] || null;
+        } else if (data && typeof data === "object") {
+          found = data;
+        }
         if (!found) {
           setError("Policy not found.");
           setPolicy(null);
         } else {
           setPolicy(mapApiPolicyToDetails(found));
+          console.log("Policy details:", found);
         }
       } catch (err) {
         setError("Failed to load policy details. Please try again.");
@@ -74,11 +77,10 @@ export default function PoliciesIdPage({
     };
 
     fetchPolicyDetails();
-  }, [id]);
+  }, [policyId, walletAddress]);
 
   const getPolicyIcon = () => {
     if (!policy) return <Shield className="h-6 w-6" />;
-
     switch (policy.type) {
       case "health":
         return <HeartPulse className="h-6 w-6 text-red-500" />;
@@ -93,7 +95,6 @@ export default function PoliciesIdPage({
 
   const getPolicyTypeDisplay = () => {
     if (!policy) return "Insurance Policy";
-
     switch (policy.type) {
       case "health":
         return "Health Insurance";
@@ -108,7 +109,6 @@ export default function PoliciesIdPage({
 
   const getStatusBadgeVariant = () => {
     if (!policy) return "default";
-
     switch (policy.status) {
       case "active":
         return "secondary";
@@ -125,7 +125,6 @@ export default function PoliciesIdPage({
 
   const getStatusDisplay = () => {
     if (!policy) return "";
-
     return policy.status
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

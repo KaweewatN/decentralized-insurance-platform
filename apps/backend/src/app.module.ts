@@ -9,7 +9,7 @@ import { OracleModule } from './module/oracle/oracle.module';
 import { WalletModule } from './module/wallet/wallet.module';
 import { PrismaModule } from './service/prisma/prisma.module';
 import { AuthModule } from './module/auth/auth.module';
-import { PolicyModule } from './module/user/policy/policy.module';
+import { UserModule } from './module/user/user.module';
 
 @Module({
   imports: [
@@ -26,7 +26,7 @@ import { PolicyModule } from './module/user/policy/policy.module';
     AuthModule,
     PrismaModule,
     FlightInsuranceModule,
-    PolicyModule,
+    UserModule,
   ],
 })
 export class AppModule {}
