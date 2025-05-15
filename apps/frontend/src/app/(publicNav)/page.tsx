@@ -1,4 +1,4 @@
-import Landing from "@/pages/landing/Landing";
+import Landing from "@/views/landing/Landing";
 
 export default function LearnMorePage() {
   return <Landing />;

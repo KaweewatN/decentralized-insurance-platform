@@ -69,7 +69,7 @@ export class OracleFlightService {
     14: Math.floor(Date.now() / 1000) - 1.5 * 86400, // 1.5 days ago → process
   };
 
-  @Cron('* * * * *') // Every hour at minute 0
+  @Cron('0 * * * *') // Every hour at minute 0
   async handleScheduledChecks() {
     this.logger.log('🔁 Running scheduled flight status check...');
 

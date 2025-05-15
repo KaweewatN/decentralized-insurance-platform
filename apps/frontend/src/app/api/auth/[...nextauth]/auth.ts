@@ -116,3 +116,12 @@ export async function authenticateAdmin(): Promise<AuthResponse> {
   }
   return { session, response: "Session found" };
 }
+
+export async function getWalletAddress(): Promise<string> {
+  const session = await getServerAuthSession();
+  if (!session) {
+    throw { response: "No session found" };
+  }
+  const SessionUser = session.user as unknown as { id: string };
+  return SessionUser?.id;
+}

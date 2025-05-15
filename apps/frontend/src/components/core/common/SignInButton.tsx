@@ -19,6 +19,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { toastSuccess, toastError } from "./appToast";
 import { signIn, signOut, useSession } from "next-auth/react";
@@ -29,6 +30,7 @@ export default function SignInButton() {
   const [isPending, startTransition] = useTransition();
   const [tab, setTab] = useState("signin");
   const { data: session } = useSession() || {};
+  const router = useRouter();
 
   const connectWallet = async () => {
     if (!window.ethereum) {
@@ -61,6 +63,7 @@ export default function SignInButton() {
         if (res?.ok) {
           setResponse("Sign in successful");
           toastSuccess("Sign in successful");
+          router.push("/dashboard");
         } else {
           setResponse(res?.error || "Failed to sign in");
           toastError(res?.error || "Failed to sign in");

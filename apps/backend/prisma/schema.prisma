@@ -40,16 +40,29 @@ model User {
   events   EventLog[]
 }
 
+enum PolicyStatus {
+  All
+  Active
+  Expired
+  PendingPayment
+  Claimed
+}
+
 model Policy {
-  id            Int      @id @default(autoincrement())
-  walletAddress String
-  premium       Decimal  @db.Decimal(10, 2)
-  sumAssured    Decimal  @db.Decimal(10, 2)
-  expiry        DateTime
-  isActive      Boolean  @default(true)
-  planTypeId    Int
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                Int          @id @default(autoincrement())
+  walletAddress     String
+  premium           Decimal      @db.Decimal(10, 2)
+  sumAssured        Decimal      @db.Decimal(10, 2)
+  coverageAmount    Decimal      @db.Decimal(10, 2)
+  status            PolicyStatus
+  coverageStartDate DateTime
+  coverageEndDate   DateTime
+  transactionHash   String
+  contractAddress   String
+  documentUrl       String?
+  planTypeId        Int
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   user     User       @relation(fields: [walletAddress], references: [walletAddress])
   planType PolicyType @relation(fields: [planTypeId], references: [id])
@@ -57,16 +70,17 @@ model Policy {
 }
 
 model Claim {
-  id            Int       @id @default(autoincrement())
-  walletAddress String
-  policyId      Int
-  amount        Decimal   @db.Decimal(10, 2)
-  documentHash  String    @unique
-  isPending     Boolean   @default(true)
-  status        String    @default("Pending")
-  approvedDate  DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              Int       @id @default(autoincrement())
+  walletAddress   String
+  policyId        Int
+  amount          Decimal   @db.Decimal(10, 2)
+  documentHash    String    @unique
+  isPending       Boolean   @default(true)
+  status          String    @default("Pending")
+  contractAddress String?
+  approvedDate    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   user   User   @relation(fields: [walletAddress], references: [walletAddress])
   policy Policy @relation(fields: [policyId], references: [id])
