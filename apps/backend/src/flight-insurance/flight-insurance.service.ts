@@ -2,17 +2,32 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../file-upload/supabase.service';
-import { ethers } from 'ethers';
+import { ethers, Contract } from 'ethers';
 import { Wallet, AbiCoder, keccak256, getBytes } from 'ethers';
 import { randomUUID } from 'crypto';
+import * as contractJson from '../../../../contracts/artifacts/contracts/FlightDelayInsurance.sol/FlightInsurance.json';
 
 const mockApplications: Record<string, any> = {};
 
 @Injectable()
 export class FlightInsuranceService {
-  constructor(private readonly supabaseService: SupabaseService,
+  private contract: ethers.Contract;
+
+  constructor(
+    private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService
-  ) { }
+  ) {
+    // Load environment variables
+    const rpcUrl = this.configService.get<string>('SEPOLIA_RPC');
+    const contractAddress = this.configService.get<string>('FLIGHT_CONTRACT_ADDRESS');
+
+    if (!rpcUrl || !contractAddress) {
+      throw new Error('Missing SEPOLIA_RPC or FLIGHT_CONTRACT_ADDRESS in .env');
+    }
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.contract = new ethers.Contract(contractAddress, contractJson.abi, provider);
+  }
   private airlineRisk: Record<string, number> = {
     TG: 0.3,  // Thai Airways
     EK: 0.25, // Emirates
@@ -246,6 +261,30 @@ export class FlightInsuranceService {
       signature,
       scaledPremium, // Return integer value used in signature
     };
+  }
+
+  async getUserPolicyHistory(userAddress: string) {
+    const policyIds: bigint[] = await this.contract.getUserPolicies(userAddress);
+
+    const policies = await Promise.all(
+      policyIds.map(async (id) => {
+        const policy = await this.contract.policies(id);
+
+        return {
+          policyId: id.toString(), // bigint to string
+          user: policy.user,
+          flightNumber: policy.flightNumber,
+          flightTime: Number(policy.flightTime), // bigint to number
+          coverageAmountPerPerson: Number(policy.coverageAmountPerPerson),
+          premiumPaid: Number(policy.premiumPaid),
+          numInsuredPersons: Number(policy.numInsuredPersons),
+          status: Number(policy.status), // PolicyStatus enum as number
+          eligibleForPayout: policy.eligibleForPayout
+        };
+      })
+    );
+
+    return policies;
   }
 
 }

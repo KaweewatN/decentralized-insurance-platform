@@ -85,17 +85,25 @@ export class FlightInsuranceController {
   }
 
   @Post('generate-signature')
-async generateSignature(@Body() body: any) {
-  const { flightNumber, coveragePerPerson, numPersons, totalPremium } = body;
+  async generateSignature(@Body() body: any) {
+    const { flightNumber, coveragePerPerson, numPersons, totalPremium } = body;
 
-  return this.flightInsuranceService.generateSignature(
-    flightNumber,
-    coveragePerPerson,
-    numPersons,
-    totalPremium,
-  );
-}
+    return this.flightInsuranceService.generateSignature(
+      flightNumber,
+      coveragePerPerson,
+      numPersons,
+      totalPremium,
+    );
+  }
 
+  @Get('user-policies')
+  async getUserPolicies(@Query('userAddress') userAddress: string) {
+    if (!userAddress) {
+      return { error: 'Missing userAddress in query' };
+    }
+    const history = await this.flightInsuranceService.getUserPolicyHistory(userAddress);
+    return { policies: history };
+  }
 
 
 
