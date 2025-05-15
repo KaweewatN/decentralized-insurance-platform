@@ -1,0 +1,23 @@
+[
+  {
+    "id": "eef71a6e-21ba-462e-8699-10f19a45a579",
+    "fullName": "Alice",
+    "email": "alice@example.com",
+    "password": "$2b$10$dJw7p5f0Tkf.Gj4s7gxS8Ox1kJA6yNnGS0L3kGmN.xu1XoiJNUVwa",
+    "age": 30,
+    "gender": "Female",
+    "occupation": "Engineer",
+    "walletAddress": "0x1234567890abcdef1234567890abcdef12345678",
+    "role": "USER"
+  },
+  {
+    "id": "acf71a6e-21ba-462e-8699-10f19a45a579",
+    "fullName": "Admin",
+    "email": "admin@example.com",
+    "password": "$2b$10$0mjopvQmKuN0NqSMTLMSYuOy0ItM.cHnOa1nBgUj0PTIP2x63yM/K",
+    "gender": "Male",
+    "occupation": "Doctor",
+    "walletAddress": "0xabcdef1234567890abcdef1234567890abcdef12",
+    "role": "ADMIN"
+  }
+]

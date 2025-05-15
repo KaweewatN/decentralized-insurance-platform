@@ -1,0 +1,29 @@
+[
+  {
+    "policyId": "POLICY-001",
+    "userId": "USER-1",
+    "premium": 5000,
+    "sumAssured": 100000,
+    "expiry": 1735689600000,
+    "isActive": true,
+    "claimAmount": 0
+  },
+  {
+    "policyId": "POLICY-002",
+    "userId": "USER-2",
+    "premium": 6000,
+    "sumAssured": 120000,
+    "expiry": 1735689600000,
+    "isActive": true,
+    "claimAmount": 0
+  },
+  {
+    "policyId": "POLICY-003",
+    "userId": "USER-3",
+    "premium": 8000,
+    "sumAssured": 150000,
+    "expiry": 1735689600000,
+    "isActive": true,
+    "claimAmount": 10000
+  }
+]

@@ -1,129 +1,254 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { InsuranceVault } from "../typechain-types";
+import { InsuranceVault } from "../typechain-types"; // Make sure this path is correct
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers"; // Import SignerWithAddress
 
 describe("InsuranceVault", function () {
-  let vault: InsuranceVault;
-  let owner: any, user: any, other: any;
+  let insuranceVault: InsuranceVault;
+  let owner: SignerWithAddress; // Use SignerWithAddress for type safety
+  let user: SignerWithAddress; // Use SignerWithAddress for type safety
 
-  beforeEach(async () => {
-    [owner, user, other] = await ethers.getSigners();
+  beforeEach(async function () {
+    // Get signers
+    [owner, user] = await ethers.getSigners();
 
-    const VaultFactory = await ethers.getContractFactory(
+    // Get contract factory, explicitly connecting the owner as the deployer
+    const InsuranceVaultFactory = await ethers.getContractFactory(
       "InsuranceVault",
-      owner
+      owner // The owner signer will be used for deployment and Ownable's initial owner
     );
-    vault = await VaultFactory.deploy(owner.address);
-    await vault.waitForDeployment();
+    // Deploy the contract
+    insuranceVault = (await InsuranceVaultFactory.deploy(
+      owner.address // Pass the owner's address to the Ownable constructor
+    )) as unknown as InsuranceVault; // Cast to InsuranceVault type
+    await insuranceVault.waitForDeployment(); // Wait for the contract to be deployed
+    console.log(
+      "Deployed InsuranceVault contract at:",
+      await insuranceVault.getAddress()
+    );
   });
 
-  describe("Premium Payment (receive)", function () {
-    it("should accept ETH and emit PremiumPaid", async () => {
-      const amount = ethers.parseEther("1");
+  it("should accept premium payments and emit PremiumPaid event", async function () {
+    const premiumAmount = ethers.parseEther("1");
+    console.log("Sending premium payment of:", premiumAmount.toString());
 
-      await expect(
-        user.sendTransaction({
-          to: await vault.getAddress(),
-          value: amount,
-        })
-      )
-        .to.emit(vault, "PremiumPaid")
-        .withArgs(await user.getAddress(), amount);
+    // User sends ETH to the contract, triggering the receive() function
+    await expect(
+      user.sendTransaction({
+        to: await insuranceVault.getAddress(), // Use getAddress() for the target
+        value: premiumAmount,
+      })
+    )
+      .to.emit(insuranceVault, "PremiumPaid")
+      .withArgs(user.address, premiumAmount); // msg.sender will be user.address
 
-      const balance = await ethers.provider.getBalance(
-        await vault.getAddress()
-      );
-      expect(balance).to.equal(amount);
-    });
-
-    it("should revert if 0 ETH is sent", async () => {
-      await expect(
-        user.sendTransaction({
-          to: await vault.getAddress(),
-          value: 0,
-        })
-      ).to.be.revertedWith("Premium must be greater than zero");
-    });
+    const vaultBalance = await insuranceVault.getVaultBalance();
+    console.log(
+      "Vault balance after premium payment:",
+      vaultBalance.toString()
+    );
+    expect(vaultBalance).to.equal(premiumAmount);
   });
 
-  describe("Claim Approval", function () {
-    it("should allow owner to approve claim payout", async () => {
-      const amount = ethers.parseEther("1");
-      await owner.sendTransaction({
-        to: await vault.getAddress(),
-        value: amount,
-      });
+  it("should allow the owner to send a claim payout", async function () {
+    const premiumAmount = ethers.parseEther("2");
+    const payoutAmount = ethers.parseEther("1");
 
-      await expect(
-        vault.connect(owner).approveClaim(await user.getAddress(), amount)
-      )
-        .to.emit(vault, "ClaimApproved")
-        .withArgs(await user.getAddress(), amount);
+    console.log("Sending premium payment of:", premiumAmount.toString());
+    // Fund the vault first
+    await user.sendTransaction({
+      to: await insuranceVault.getAddress(),
+      value: premiumAmount,
     });
 
-    it("should revert if non-owner tries to approve claim", async () => {
-      await expect(
-        vault
-          .connect(user)
-          .approveClaim(await user.getAddress(), ethers.parseEther("1"))
-      )
-        .to.be.revertedWithCustomError(vault, "OwnableUnauthorizedAccount")
-        .withArgs(await user.getAddress());
-    });
+    console.log("Sending claim payout of:", payoutAmount.toString());
+    // Corrected: Call approveClaim instead of sendPayout
+    await expect(
+      insuranceVault.connect(owner).approveClaim(user.address, payoutAmount) // User's address is payable
+    )
+      .to.emit(insuranceVault, "ClaimPaid")
+      .withArgs(user.address, payoutAmount);
 
-    it("should revert if vault has insufficient balance", async () => {
-      await expect(
-        vault
-          .connect(owner)
-          .approveClaim(await user.getAddress(), ethers.parseEther("100"))
-      ).to.be.revertedWith("Insufficient balance in vault");
-    });
+    const vaultBalance = await insuranceVault.getVaultBalance();
+    console.log("Vault balance after claim payout:", vaultBalance.toString());
+    expect(vaultBalance).to.equal(premiumAmount - payoutAmount);
   });
 
-  describe("Refund Issuance", function () {
-    it("should allow owner to issue refund", async () => {
-      const amount = ethers.parseEther("0.5");
-      await owner.sendTransaction({
-        to: await vault.getAddress(),
-        value: amount,
-      });
+  it("should revert if non-owner tries to send a claim payout", async function () {
+    const premiumAmount = ethers.parseEther("2"); // Fund the vault
+    const payoutAmount = ethers.parseEther("1");
+    console.log(
+      "Attempting to send claim payout as non-owner:",
+      payoutAmount.toString()
+    );
 
-      await expect(
-        vault.connect(owner).issueRefund(await user.getAddress(), amount)
+    // Fund the vault first so it doesn't revert due to insufficient balance
+    await owner.sendTransaction({
+      to: await insuranceVault.getAddress(),
+      value: premiumAmount,
+    });
+
+    // Corrected: Call approveClaim instead of sendPayout
+    // Expecting revert due to Ownable's onlyOwner modifier
+    await expect(
+      insuranceVault
+        .connect(user) // Non-owner attempts the call
+        .approveClaim(user.address, payoutAmount)
+    )
+      .to.be.revertedWithCustomError(
+        insuranceVault,
+        "OwnableUnauthorizedAccount"
       )
-        .to.emit(vault, "RefundIssued")
-        .withArgs(await user.getAddress(), amount);
-    });
-
-    it("should revert if non-owner tries to issue refund", async () => {
-      await expect(
-        vault
-          .connect(user)
-          .issueRefund(await user.getAddress(), ethers.parseEther("0.5"))
-      )
-        .to.be.revertedWithCustomError(vault, "OwnableUnauthorizedAccount")
-        .withArgs(await user.getAddress());
-    });
-
-    it("should revert if vault has insufficient balance for refund", async () => {
-      await expect(
-        vault
-          .connect(owner)
-          .issueRefund(await user.getAddress(), ethers.parseEther("100"))
-      ).to.be.revertedWith("Insufficient balance in vault");
-    });
+      .withArgs(user.address);
   });
 
-  describe("Vault Balance", function () {
-    it("should return correct vault balance", async () => {
-      const deposit = ethers.parseEther("1");
-      await owner.sendTransaction({
-        to: await vault.getAddress(),
-        value: deposit,
-      });
+  it("should allow the owner to issue a refund", async function () {
+    const premiumAmount = ethers.parseEther("2");
+    const refundAmount = ethers.parseEther("1");
 
-      const balance = await vault.getVaultBalance();
-      expect(balance).to.equal(deposit);
+    console.log("Sending premium payment of:", premiumAmount.toString());
+    await user.sendTransaction({
+      to: await insuranceVault.getAddress(),
+      value: premiumAmount,
     });
+
+    console.log("Issuing refund of:", refundAmount.toString());
+    await expect(
+      insuranceVault.connect(owner).sendRefund(user.address, refundAmount) // User's address is payable
+    )
+      .to.emit(insuranceVault, "RefundIssued")
+      .withArgs(user.address, refundAmount);
+
+    const vaultBalance = await insuranceVault.getVaultBalance();
+    console.log("Vault balance after refund:", vaultBalance.toString());
+    expect(vaultBalance).to.equal(premiumAmount - refundAmount);
+  });
+
+  it("should revert if non-owner tries to issue a refund", async function () {
+    const premiumAmount = ethers.parseEther("2"); // Fund the vault
+    const refundAmount = ethers.parseEther("1");
+    console.log(
+      "Attempting to issue refund as non-owner:",
+      refundAmount.toString()
+    );
+    // Fund the vault first
+    await owner.sendTransaction({
+      to: await insuranceVault.getAddress(),
+      value: premiumAmount,
+    });
+
+    // Expecting revert due to Ownable's onlyOwner modifier
+    await expect(
+      insuranceVault
+        .connect(user) // Non-owner attempts the call
+        .sendRefund(user.address, refundAmount)
+    )
+      .to.be.revertedWithCustomError(
+        insuranceVault,
+        "OwnableUnauthorizedAccount"
+      )
+      .withArgs(user.address);
+  });
+
+  it("should allow the owner to withdraw funds", async function () {
+    const premiumAmount = ethers.parseEther("3");
+    const withdrawAmount = ethers.parseEther("2");
+
+    console.log("Sending premium payment of:", premiumAmount.toString());
+    await user.sendTransaction({
+      to: await insuranceVault.getAddress(),
+      value: premiumAmount,
+    });
+
+    console.log("Withdrawing funds of:", withdrawAmount.toString());
+    await expect(
+      insuranceVault.connect(owner).withdrawFunds(owner.address, withdrawAmount) // Owner's address is payable
+    )
+      .to.emit(insuranceVault, "FundWithdrawn")
+      .withArgs(owner.address, withdrawAmount);
+
+    const vaultBalance = await insuranceVault.getVaultBalance();
+    console.log("Vault balance after withdrawal:", vaultBalance.toString());
+    expect(vaultBalance).to.equal(premiumAmount - withdrawAmount);
+  });
+
+  it("should revert if non-owner tries to withdraw funds", async function () {
+    const premiumAmount = ethers.parseEther("2"); // Fund the vault
+    const withdrawAmount = ethers.parseEther("1");
+    console.log(
+      "Attempting to withdraw funds as non-owner:",
+      withdrawAmount.toString()
+    );
+    // Fund the vault first
+    await owner.sendTransaction({
+      to: await insuranceVault.getAddress(),
+      value: premiumAmount,
+    });
+
+    // Expecting revert due to Ownable's onlyOwner modifier
+    await expect(
+      insuranceVault
+        .connect(user) // Non-owner attempts the call
+        .withdrawFunds(user.address, withdrawAmount)
+    )
+      .to.be.revertedWithCustomError(
+        insuranceVault,
+        "OwnableUnauthorizedAccount"
+      )
+      .withArgs(user.address);
+  });
+
+  it("should revert if trying to send a payout with insufficient balance", async function () {
+    const payoutAmount = ethers.parseEther("1"); // Vault is empty
+    console.log(
+      "Attempting to send payout with insufficient balance:",
+      payoutAmount.toString()
+    );
+
+    // Corrected: Call approveClaim instead of sendPayout
+    await expect(
+      insuranceVault.connect(owner).approveClaim(user.address, payoutAmount)
+    ).to.be.revertedWith("Insufficient balance in vault");
+  });
+
+  it("should revert if trying to issue a refund with insufficient balance", async function () {
+    const refundAmount = ethers.parseEther("1"); // Vault is empty
+    console.log(
+      "Attempting to issue refund with insufficient balance:",
+      refundAmount.toString()
+    );
+
+    await expect(
+      insuranceVault.connect(owner).sendRefund(user.address, refundAmount)
+    ).to.be.revertedWith("Insufficient balance in vault");
+  });
+
+  it("should revert if trying to withdraw funds with insufficient balance", async function () {
+    const withdrawAmount = ethers.parseEther("1"); // Vault is empty
+    console.log(
+      "Attempting to withdraw funds with insufficient balance:",
+      withdrawAmount.toString()
+    );
+
+    await expect(
+      insuranceVault.connect(owner).withdrawFunds(owner.address, withdrawAmount)
+    ).to.be.revertedWith("Insufficient balance in vault");
+  });
+
+  it("should return the correct vault balance", async function () {
+    const premiumAmount = ethers.parseEther("1");
+    console.log("Sending premium payment of:", premiumAmount.toString());
+
+    await user.sendTransaction({
+      to: await insuranceVault.getAddress(),
+      value: premiumAmount,
+    });
+
+    const vaultBalance = await insuranceVault.getVaultBalance();
+    console.log(
+      "Vault balance after premium payment:",
+      vaultBalance.toString()
+    );
+    expect(vaultBalance).to.equal(premiumAmount);
   });
 });
