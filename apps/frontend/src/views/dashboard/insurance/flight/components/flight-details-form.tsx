@@ -64,9 +64,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const tierToAmount: Record<string, number> = {
-  tier1: 0.1,
-  tier2: 0.25,
-  tier3: 0.5,
+  tier1: 0.02,
+  tier2: 0.1,
+  tier3: 0.25,
 };
 
 export function FlightDetailsForm({
@@ -99,7 +99,7 @@ export function FlightDetailsForm({
       depCountry: "",
       arrCountry: "",
       coverageTier: "tier2",
-      coverageAmount: 0.25,
+      coverageAmount: 0.1,
       numPersons: undefined,
     },
   });
@@ -461,9 +461,9 @@ export function FlightDetailsForm({
                             Basic Coverage
                           </Label>
                           <p className="text-gray-500">
-                            0.1 ETH payout (
+                            0.02 ETH payout (
                             {ethToThb !== null
-                              ? `${(0.1 * ethToThb).toLocaleString()} THB`
+                              ? `${(0.02 * ethToThb).toLocaleString()} THB`
                               : "N/A"}
                             )
                           </p>
@@ -495,9 +495,9 @@ export function FlightDetailsForm({
                             Standard Coverage
                           </Label>
                           <p className="text-gray-500">
-                            0.25 ETH payout (
+                            0.1 ETH payout (
                             {ethToThb !== null
-                              ? `${(0.25 * ethToThb).toLocaleString()} THB`
+                              ? `${(0.1 * ethToThb).toLocaleString()} THB`
                               : "N/A"}
                             )
                           </p>
@@ -529,9 +529,9 @@ export function FlightDetailsForm({
                             Premium Coverage
                           </Label>
                           <p className="text-gray-500">
-                            0.5 ETH payout (
+                            0.25 ETH payout (
                             {ethToThb !== null
-                              ? `${(0.5 * ethToThb).toLocaleString()} THB`
+                              ? `${(0.25 * ethToThb).toLocaleString()} THB`
                               : "N/A"}
                             )
                           </p>

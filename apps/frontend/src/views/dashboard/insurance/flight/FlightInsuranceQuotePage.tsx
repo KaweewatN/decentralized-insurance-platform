@@ -23,6 +23,9 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FlightQuoteDetails } from "@/views/dashboard/insurance/flight/components/flight-quote-details";
 
+// Add ethers for MetaMask interaction
+import { ethers } from "ethers";
+
 export default function FlightInsuranceQuotePage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,12 +38,25 @@ export default function FlightInsuranceQuotePage() {
   const [flightDetails, setFlightDetails] = useState<any>(null);
   const [premiumDetails, setPremiumDetails] = useState<any>(null);
 
+  // Store draft for API payload
+  const [draft, setDraft] = useState<any>(null);
+
+  // MetaMask wallet state
+  const [account, setAccount] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
+  const [txHash, setTxHash] = useState<string>("");
+
+  // For ETH transfer
+  const [amount, setAmount] = useState<string>("0.0001"); // default premium
+  const [to, setTo] = useState<string>(""); // will be set from draft
+
+  // Auto connect from localStorage user_address
   useEffect(() => {
-    // Retrieve data from localStorage
     try {
       const stored = localStorage.getItem("flightPolicyDraft");
       if (stored) {
         const data = JSON.parse(stored);
+        setDraft(data);
         setFlightDetails({
           airline: data.airline,
           flightNumber: data.flightNumber,
@@ -51,9 +67,9 @@ export default function FlightInsuranceQuotePage() {
           numPersons: data.numPersons,
         });
         setPremiumDetails({
-          premium: data.totalPremium, // ETH
+          premium: data.totalPremium,
           premiumPerPerson: data.premiumPerPerson,
-          coverageAmount: data.coverageAmount, // ETH
+          coverageAmount: data.coverageAmount,
           delayThreshold: "3 hours",
           policyTerms:
             "Automatic payout if flight arrival is delayed by more than 3 hours",
@@ -63,42 +79,137 @@ export default function FlightInsuranceQuotePage() {
               : data.probability > 0.15
                 ? "Medium"
                 : "Low",
-          validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+          validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
+        setTo(
+          data.insurer_address || "0xdd5c9030612CF05e4a5638068Ba1f69e9D9C1100"
+        ); // Flight insurance pool address
+
+        if (data.totalPremium) {
+          setAmount(String(data.totalPremium));
+        }
+
+        // Auto set account from user_address in draft
+        if (data.user_address) {
+          setAccount(data.user_address);
+        }
       }
     } catch (e) {
-      // fallback to null
       setFlightDetails(null);
       setPremiumDetails(null);
     }
   }, []);
+
+  // Metamask auto-connect logics
+  // Connect to MetaMask (manual, not used for auto-connect)
+  const connectWallet = async () => {
+    setError("");
+    if ((window as any).ethereum) {
+      try {
+        const accounts = await (window as any).ethereum.request({
+          method: "eth_requestAccounts",
+        });
+        setAccount(accounts[0]);
+      } catch (err) {
+        setError("User rejected connection");
+      }
+    } else {
+      setError("MetaMask not detected");
+    }
+  };
+
+  // Send Ether using user_address (not MetaMask signer)
+  const sendEther = async () => {
+    setError("");
+    setTxHash("");
+    if (!to) {
+      setError("Recipient address is not set. Please try again later.");
+      throw new Error("Recipient address is not set.");
+    }
+    if (!account) {
+      setError("User address is not set.");
+      throw new Error("User address is not set.");
+    }
+    try {
+      if ((window as any).ethereum) {
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+
+        const signer = await provider.getSigner(account);
+        const tx = await signer.sendTransaction({
+          to,
+          value: ethers.parseEther(amount),
+        });
+        setTxHash(tx.hash);
+        setTransactionHash(tx.hash);
+        return tx.hash;
+      } else {
+        setError("MetaMask not detected");
+        throw new Error("MetaMask not detected");
+      }
+    } catch (err: any) {
+      setError(err.message || "Transaction failed");
+      throw err;
+    }
+  };
 
   const handlePurchasePolicy = async () => {
     if (!termsAccepted) {
       alert("Please accept the terms and conditions to proceed.");
       return;
     }
-
+    if (!account) {
+      setError("User address not found.");
+      return;
+    }
     setIsSubmitting(true);
     setTransactionStatus("pending");
 
     try {
-      // Simulate blockchain transaction
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Send ETH via MetaMask, must be from user_address
+      const txHash = await sendEther();
 
-      // Mock successful transaction
-      const mockTxHash =
-        "0x" +
-        Array(64)
-          .fill(0)
-          .map(() => Math.floor(Math.random() * 16).toString(16))
-          .join("");
-      setTransactionHash(mockTxHash);
+      // Prepare payload
+      const payload = {
+        walletAdress: draft.user_address,
+        totalPremium: draft.totalPremium,
+        premiumPerPerson: draft.premiumPerPerson,
+        coverageAmount: draft.coverageAmount,
+        flightDate: draft.flightDate,
+        airline: draft.airline,
+        flightNumber: draft.flightNumber,
+        depAirport: draft.depAirport,
+        arrAirport: draft.arrAirport,
+        depTime: draft.depTime,
+        depCountry: draft.depCountry,
+        arrCountry: draft.arrCountry,
+        numPersons: draft.numPersons,
+        transactionHash: txHash,
+        walletAccount: account,
+      };
+
+      console.log("Payload:", payload);
+
+      // Call backend API
+      const res = await fetch(
+        "http://localhost:3001/api/flight-insurance/submit-application",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!res.ok) throw new Error("API error");
+      const result = await res.json();
+
+      setTransactionHash(
+        txHash || result.transfer?.data?.transactionHash || ""
+      );
       setTransactionStatus("success");
 
       setTimeout(() => {
         router.push(
-          `/dashboard/insurance/flight/apply/success?txHash=${mockTxHash}`
+          `/dashboard/insurance/flight/apply/success?txHash=${txHash || result.transfer?.data?.transactionHash || ""}`
         );
       }, 2000);
     } catch (error) {
@@ -139,6 +250,7 @@ export default function FlightInsuranceQuotePage() {
     <>
       <main className="container px-4 py-8 mx-auto bg-[#F4F6F8]">
         <div className="max-w-3xl mx-auto">
+          {/* <MetaMaskTransfer /> */}
           <div className="flex items-center gap-2 mb-6">
             <Link
               href="/dashboard/insurance/flight/apply"
@@ -224,6 +336,20 @@ export default function FlightInsuranceQuotePage() {
                     wallet address will be associated with this insurance
                     policy.
                   </p>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="outline"
+                      onClick={connectWallet}
+                      disabled={true}
+                    >
+                      {account
+                        ? `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`
+                        : "Connect MetaMask"}
+                    </Button>
+                    {error && (
+                      <span className="text-red-600 text-sm">{error}</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -297,6 +423,10 @@ export default function FlightInsuranceQuotePage() {
                     policy. This will initiate a transaction on the Sepolia
                     testnet.
                   </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-sm">Premium:</span>
+                    <span className="font-mono">{amount} ETH</span>
+                  </div>
                 </div>
               </div>
             </CardContent>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, FileText, Home, ExternalLink, Clock } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 
 export default function FlightInsuranceSuccessPage() {
   const searchParams = useSearchParams();
@@ -12,14 +13,27 @@ export default function FlightInsuranceSuccessPage() {
     searchParams.get("txHash") ||
     "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 
-  // In a real app, you would fetch these details from your backend based on the transaction hash
+  // Get policy draft from localStorage
+  const policyDraft = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const data = localStorage.getItem("flightPolicyDraft");
+      return data ? JSON.parse(data) : null;
+    }
+    return null;
+  }, []);
+
+  // Fallbacks if no data found
   const policyId = "CS-FLT-2025-00042";
-  const flightNumber = "AA123";
-  const departureDate = "May 20, 2025";
-  const route = "JFK → LAX";
-  const premium = "0.015 ETH";
-  const coverage = "0.25 ETH";
-  const delayThreshold = "3 hours";
+  const flightNumber = policyDraft?.flightNumber || "N/A";
+  const departureDate = policyDraft
+    ? `${policyDraft.flightDate} ${policyDraft.depTime}`
+    : "N/A";
+  const route = policyDraft
+    ? `${policyDraft.depAirport} → ${policyDraft.arrAirport}`
+    : "N/A";
+  const premium = policyDraft ? `${policyDraft.totalPremium} ETH` : "N/A";
+  const coverage = policyDraft ? `${policyDraft.coverageAmount} ETH` : "N/A";
+  const delayThreshold = "3 hours"; // You can adjust if you store this in draft
 
   return (
     <>
@@ -136,6 +150,7 @@ export default function FlightInsuranceSuccessPage() {
 
             <CardFooter className="flex flex-col sm:flex-row gap-4 p-6">
               <Button
+                onClick={() => localStorage.remove("flightPolicyDraft")}
                 className="w-full sm:w-auto bg-[#0D47A1] hover:bg-[#083984] text-white"
                 asChild
               >
@@ -144,7 +159,12 @@ export default function FlightInsuranceSuccessPage() {
                   Return to Dashboard
                 </Link>
               </Button>
-              <Button variant="outline" className="w-full sm:w-auto" asChild>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => localStorage.remove("flightPolicyDraft")}
+                asChild
+              >
                 <Link href="/dashboard/policies">
                   <FileText className="mr-2 h-4 w-4" />
                   View My Policies

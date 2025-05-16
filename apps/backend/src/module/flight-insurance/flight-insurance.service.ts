@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../file-upload/supabase.service';
 import { Wallet, AbiCoder, keccak256, getBytes } from 'ethers';
 import { randomUUID } from 'crypto';
-import { solidityPackedKeccak256 } from 'ethers'; // Add this import
+import { PrismaService } from 'src/service/prisma/prisma.service';
+import { solidityPackedKeccak256 } from 'ethers';
+import { Web3Service } from 'src/service/web3/web3.service';
 
 import {
   airlineRisk,
@@ -18,8 +19,9 @@ const mockApplications: Record<string, any> = {};
 @Injectable()
 export class FlightInsuranceService {
   constructor(
-    private readonly supabaseService: SupabaseService,
+    private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly web3Service: Web3Service,
   ) {}
 
   private airlineRisk = airlineRisk;
@@ -118,24 +120,71 @@ export class FlightInsuranceService {
     };
   }
 
-  // ✅ Mocked: submit application
-  async submitApplication(body: any) {
-    const id = randomUUID();
-    const newApplication = {
-      ...body,
-      id,
-      status: 'PendingApproval',
-      created_at: new Date().toISOString(),
-    };
-    mockApplications[id] = newApplication;
+  async submitApplication(application: any) {
+    // Define the recipient wallet (e.g., insurance pool)
+    const insurancePoolWallet = this.configService.get<string>(
+      'FLIGHT_CONTRACT_ADDRESS',
+    );
+    if (!insurancePoolWallet)
+      throw new Error('Insurance pool wallet not configured');
 
-    console.log(mockApplications);
+    // Transfer premium from user to insurance pool
+    // Use Frontend to sign the transaction
+    // const transferResult = await this.web3Service.transfer(
+    //   application.walletAdress,
+    //   userPrivateKey,
+    //   insurancePoolWallet,
+    //   application.totalPremium, // value in ether
+    // );
 
-    return {
-      message: 'Application submitted successfully',
-      applicationId: id,
-      status: newApplication.status,
-    };
+    // const transactionHash = transferResult.data.transactionHash;
+
+    // Calculate coverage dates (example: 1 day coverage)
+    const coverageStartDate = new Date(application.flightDate);
+    const coverageEndDate = new Date(coverageStartDate);
+    coverageEndDate.setDate(coverageEndDate.getDate() + 1);
+
+    // Mock planTypeId (should map to your PolicyType table)
+    const planTypeId = 1;
+
+    // Create Policy in DB
+    const policy = await this.prisma.policy.create({
+      data: {
+        walletAddress: application.walletAdress,
+        premium: application.premiumPerPerson,
+        sumAssured: application.totalPremium,
+        coverageAmount: application.coverageAmount,
+        status: 'PendingPayment',
+        coverageStartDate,
+        coverageEndDate,
+        transactionHash: application.transactionHash,
+        contractAddress: insurancePoolWallet,
+        documentUrl: null,
+        planTypeId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create FlightPolicy in DB, link to Policy
+    const flightPolicy = await this.prisma.flightPolicy.create({
+      data: {
+        airline: application.airline,
+        flightNumber: application.flightNumber,
+        depAirport: application.depAirport,
+        arrAirport: application.arrAirport,
+        depTime: application.depTime,
+        flightDate: new Date(application.flightDate),
+        depCountry: application.depCountry,
+        arrCountry: application.arrCountry,
+        coverageAmount: application.coverageAmount,
+        numPersons: application.numPersons,
+        createdAt: new Date(),
+        policyId: policy.id, // Link to Policy
+      },
+    });
+
+    return { policy, flightPolicy };
   }
 
   // ✅ Mocked: approve application

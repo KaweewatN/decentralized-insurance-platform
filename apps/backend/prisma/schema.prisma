@@ -51,9 +51,9 @@ enum PolicyStatus {
 model Policy {
   id                Int          @id @default(autoincrement())
   walletAddress     String
-  premium           Decimal      @db.Decimal(10, 2)
-  sumAssured        Decimal      @db.Decimal(10, 2)
-  coverageAmount    Decimal      @db.Decimal(10, 2)
+  premium           Decimal      @db.Decimal(10, 5)
+  sumAssured        Decimal      @db.Decimal(10, 5)
+  coverageAmount    Decimal      @db.Decimal(10, 5)
   status            PolicyStatus
   coverageStartDate DateTime
   coverageEndDate   DateTime
@@ -71,6 +71,8 @@ model Policy {
   flightPolicy   FlightPolicy?
   rainfallPolicy RainfallPolicy?
   healthPolicy   HealthPolicy?
+
+  @@index([walletAddress])
 }
 
 enum ClaimType {
