@@ -124,22 +124,22 @@ export default function PolicyCard({
 
             <div className="space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <span className="text-xs text-gray-500">Policy ID:</span>
-                <span className="text-xs font-medium text-[#212529]">{id}</span>
+                <span className="text-sm text-gray-500">Policy ID:</span>
+                <span className="text-sm font-medium text-[#212529]">{id}</span>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <span className="text-xs text-gray-500">
+                <span className="text-sm text-gray-500">
                   {getCoverageDetailLabel()}
                 </span>
-                <span className="text-xs font-medium text-[#212529]">
+                <span className="text-sm font-medium text-[#212529]">
                   {coverageDetail}
                 </span>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <span className="text-xs text-gray-500">Term:</span>
-                <span className="text-xs font-medium text-[#212529]">
+                <span className="text-sm text-gray-500">Term:</span>
+                <span className="text-sm text-[#212529]">
                   {startDate} to {endDate}
                 </span>
               </div>
@@ -149,7 +149,7 @@ export default function PolicyCard({
           <div className="flex flex-col items-start gap-2">
             <Badge
               variant={getStatusBadgeVariant()}
-              className="px-2 py-0.5 text-xs"
+              className="px-2 py-0.5 text-sm"
             >
               {getStatusDisplay()}
             </Badge>
@@ -159,7 +159,7 @@ export default function PolicyCard({
 
       <CardFooter className="flex flex-col sm:flex-row gap-2 p-4 pt-0 border-t border-gray-100">
         <Button
-          className="w-full sm:w-auto bg-[#0D47A1] hover:bg-[#083984] text-white text-xs h-8 px-3"
+          className="w-full sm:w-auto bg-[#0D47A1] hover:bg-[#083984] text-white text-sm h-8 px-3"
           asChild
         >
           <Link href={`/dashboard/policies/${id}`}>
@@ -170,7 +170,7 @@ export default function PolicyCard({
 
         {canClaim && (
           <Button
-            className="w-full sm:w-auto bg-[#28A745] hover:bg-[#218838] text-white text-xs h-8 px-3"
+            className="w-full sm:w-auto bg-[#28A745] hover:bg-[#218838] text-white text-sm h-8 px-3"
             asChild
           >
             <Link href={`/dashboard/claims/submit?policyId=${id}`}>

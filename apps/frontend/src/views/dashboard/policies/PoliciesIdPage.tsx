@@ -376,12 +376,12 @@ export default function PoliciesIdPage({
                     <div className="space-y-1">
                       <p className="text-sm text-gray-500">Coverage Amount</p>
                       <p className="text-2xl font-bold text-[#0D47A1]">
-                        {policy.coverageAmount}
+                        {policy.coverageAmount} THB
                       </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-gray-500">Premium</p>
-                      <p className="text-2xl font-bold">{policy.premium}</p>
+                      <p className="text-2xl font-bold">{policy.premium} ETH</p>
                     </div>
                   </div>
 

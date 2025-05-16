@@ -41,14 +41,14 @@ export function InsuranceProducts() {
       title: "Health Insurance",
       description:
         "Flexible and fair health coverage with a human touch in claim reviews. Our community of experts ensures fair assessment of all health-related claims.",
-      link: "/dashboard/insurance/health/apply",
+      link: "/dashboard/insurance/health",
     },
     {
       icon: <Gauge className="w-8 h-8" />,
       title: "Parametric Insurance",
       description:
         "Automated payouts for events like flight delays and adverse weather, based on verifiable data. No lengthy claim process - get paid automatically when conditions are met.",
-      link: "/dashboard/insurance/flight/apply",
+      link: "/dashboard/parametric",
     },
   ]
 

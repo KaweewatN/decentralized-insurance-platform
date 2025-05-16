@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../file-upload/supabase.service';
 import { Wallet, AbiCoder, keccak256, getBytes } from 'ethers';
 import { randomUUID } from 'crypto';
+import { solidityPackedKeccak256 } from 'ethers'; // Add this import
 
 import {
   airlineRisk,
@@ -190,14 +191,14 @@ export class FlightInsuranceService {
     if (!privateKey) throw new Error('Private key not found');
 
     const signer = new Wallet(privateKey);
-    const abiCoder = new AbiCoder();
 
-    const encoded = abiCoder.encode(
+    // Use solidityPackedKeccak256 for abi.encodePacked
+    const messageHash = solidityPackedKeccak256(
       ['string', 'uint256', 'uint256', 'uint256'],
       [flightNumber, coveragePerPerson, numPersons, scaledPremium],
     );
 
-    const messageHash = keccak256(encoded);
+    // signMessage applies the Ethereum Signed Message prefix
     const signature = await signer.signMessage(getBytes(messageHash));
     return signature;
   }

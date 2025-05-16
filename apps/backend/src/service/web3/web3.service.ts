@@ -45,11 +45,13 @@ export class Web3Service {
     };
   }
 
-  async transfer(toWallet: string, value: number) {
-    const nonce = await this.web3.eth.getTransactionCount(
-      this.config.wallet,
-      'latest',
-    );
+  async transfer(
+    fromWallet: string,
+    privateKey: string,
+    toWallet: string,
+    value: number,
+  ) {
+    const nonce = await this.web3.eth.getTransactionCount(fromWallet, 'latest');
 
     // Get current gas fees for EIP-1559
     const feeData = await this.web3.eth.getBlock('pending');
@@ -64,6 +66,7 @@ export class Web3Service {
     }
 
     const transaction = {
+      from: fromWallet,
       to: toWallet,
       value: this.web3.utils.toHex(value), // value should be in wei
       gas: 21000,
@@ -75,7 +78,7 @@ export class Web3Service {
 
     const signedTx = await this.web3.eth.accounts.signTransaction(
       transaction,
-      this.config.privateKey,
+      privateKey,
     );
 
     const tx = await this.web3.eth.sendSignedTransaction(

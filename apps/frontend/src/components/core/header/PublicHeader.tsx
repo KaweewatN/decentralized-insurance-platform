@@ -43,7 +43,7 @@ export default function PublicHeader() {
               link.protected && !session ? (
                 <span
                   key={link.href}
-                  className="text-gray-300 font-medium rounded-md px-3 py-2 cursor-not-allowed"
+                  className="text-gray-300 font-semibold rounded-md px-3 py-2 cursor-not-allowed"
                   title="Sign in to access"
                 >
                   {link.label}
@@ -52,7 +52,7 @@ export default function PublicHeader() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-gray-500 hover:text-[#0D47A1] hover:bg-blue-100 font-medium transition-colors rounded-md px-3 py-2"
+                  className="text-slate-500 hover:text-[#0D47A1] hover:bg-blue-100 font-semibold transition-colors rounded-md px-3 py-2"
                 >
                   {link.label}
                 </Link>
@@ -101,7 +101,7 @@ export default function PublicHeader() {
               link.protected && !session ? (
                 <span
                   key={link.href}
-                  className="block py-2 text-gray-300 font-medium cursor-not-allowed"
+                  className="block py-2 text-gray-300 font-semibold cursor-not-allowed"
                   title="Sign in to access"
                 >
                   {link.label}
@@ -110,7 +110,7 @@ export default function PublicHeader() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="block py-2 text-[#212529] hover:text-[#0D47A1] font-medium transition-colors"
+                  className="block py-2 text-[#212529] hover:text-[#0D47A1] font-semibold transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.label}

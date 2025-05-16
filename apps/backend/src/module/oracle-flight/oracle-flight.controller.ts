@@ -10,7 +10,4 @@ export class OracleFlightController {
   async checkPoliciesNow() {
     return this.oracleFlightService.handleScheduledChecks();
   }
-
 }
-
-

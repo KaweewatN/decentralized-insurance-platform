@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/libs/utils";
 import { Button } from "@/components/ui/button";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,11 +27,14 @@ import {
   Cloud,
   Heart,
   LogOut,
+  Wallet,
 } from "lucide-react";
 
 export default function PrimaryHeader() {
   const pathname = usePathname() || "";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { data: session } = useSession();
+  const walletAddress = session?.user?.id || "";
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -102,8 +107,8 @@ export default function PrimaryHeader() {
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-16">
+        <div className="flex justify-between h-16 ">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="flex items-center">
@@ -125,7 +130,7 @@ export default function PrimaryHeader() {
                       <Button
                         variant="ghost"
                         className={cn(
-                          "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                          "flex items-center px-3 py-2 text-sm font-semibold rounded-md",
                           isActive(item.href)
                             ? "text-blue-700 bg-blue-100"
                             : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -158,7 +163,7 @@ export default function PrimaryHeader() {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                    "flex items-center px-3 py-2 text-sm font-semibold rounded-md",
                     isActive(item.href)
                       ? "text-blue-700 bg-blue-100"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -169,15 +174,37 @@ export default function PrimaryHeader() {
                 </Link>
               );
             })}
-            {/* Signout Button */}
-            <Button
-              variant="ghost"
-              className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-red-600 hover:text-red-800"
-              onClick={() => signOut()}
-            >
-              <LogOut className="h-5 w-5" />
-              <span className="ml-2">Sign out</span>
-            </Button>
+            {walletAddress && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <span className="flex items-center px-3 py-2 text-sm font-semibold rounded-md text-gray-700 cursor-pointer border border-gray-300">
+                    <Wallet className="h-5 w-5 mr-2 text-primary" />
+                    {walletAddress.substring(0, 6)}...
+                    {walletAddress.substring(walletAddress.length - 4)}
+                  </span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <a
+                      href={`https://etherscan.io/address/${walletAddress}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center text-blue-600 hover:text-blue-800 cursor-pointer"
+                    >
+                      <Wallet className="h-5 w-5 font-semibold mr-1" />
+                      <span className="font-semibold">View on Etherscan</span>
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center text-red-600 hover:text-red-800 cursor-pointer"
+                    onClick={() => signOut()}
+                  >
+                    <LogOut className="h-5 w-5 font-semibold mr-1" />
+                    <span className="font-semibold">Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -189,9 +216,9 @@ export default function PrimaryHeader() {
               aria-label="Open menu"
             >
               {isMenuOpen ? (
-                <X className="h-6 w-6" />
+                <X className="h-10 w-10" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="h-10 w-10" />
               )}
             </Button>
           </div>
@@ -208,7 +235,7 @@ export default function PrimaryHeader() {
                   <div key={item.name} className="space-y-1">
                     <div
                       className={cn(
-                        "flex items-center px-4 py-2 text-base font-medium",
+                        "flex items-center px-4 py-2 text-base font-semibold",
                         isActive(item.href)
                           ? "text-primary bg-primary/10"
                           : "text-gray-600"
@@ -223,7 +250,7 @@ export default function PrimaryHeader() {
                           key={dropdownItem.name}
                           href={dropdownItem.href}
                           className={cn(
-                            "flex items-center px-4 py-2 text-sm font-medium",
+                            "flex items-center px-4 py-2 text-sm font-semibold",
                             pathname === dropdownItem.href
                               ? "text-primary bg-primary/10"
                               : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -244,7 +271,7 @@ export default function PrimaryHeader() {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "flex items-center px-4 py-2 text-base font-medium",
+                    "flex items-center px-4 py-2 text-base font-semibold",
                     isActive(item.href)
                       ? "text-primary bg-primary/10"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -256,6 +283,24 @@ export default function PrimaryHeader() {
                 </Link>
               );
             })}
+            <button
+              className="flex items-center px-4 py-2 text-base font-semibold text-red-600 hover:text-red-800 w-full"
+              onClick={() => {
+                setIsMenuOpen(false);
+                () => signOut();
+              }}
+            >
+              <a
+                href={`https://etherscan.io/address/${walletAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center text-blue-600 hover:text-blue-800 cursor-pointer"
+              >
+                <Wallet className="h-5 w-5 font-semibold mr-1" />
+                <span className="font-semibold">View on Etherscan</span>
+              </a>
+            </button>
+
             {/* Signout Button for Mobile */}
             <button
               className="flex items-center px-4 py-2 text-base font-medium text-red-600 hover:text-red-800 w-full"
@@ -264,8 +309,8 @@ export default function PrimaryHeader() {
                 () => signOut();
               }}
             >
-              <LogOut className="h-5 w-5" />
-              <span className="ml-3">Sign out</span>
+              <LogOut className="h-5 w-5 font-semibold" />
+              <span className="font-semibold ml-1">Sign out</span>
             </button>
           </div>
         </div>

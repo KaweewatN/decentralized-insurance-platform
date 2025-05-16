@@ -13,6 +13,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { FlightInsuranceService } from './flight-insurance.service';
 import { SupabaseService } from '../file-upload/supabase.service';
 import { ParseFloatPipe } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
 
 @Controller('flight-insurance')
 export class FlightInsuranceController {
@@ -22,7 +25,7 @@ export class FlightInsuranceController {
   ) {}
 
   @Get('estimate-premium')
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard)
   async estimatePremium(
     @Query('airline') airline: string,
     @Query('depAirport') depAirport: string,
@@ -48,7 +51,7 @@ export class FlightInsuranceController {
   }
 
   @Post('upload-ticket')
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadTicket(
     @UploadedFile() file: Express.Multer.File,
@@ -105,5 +108,23 @@ export class FlightInsuranceController {
       numPersons,
       totalPremium,
     );
+  }
+
+  @Get('abi')
+  getAbi() {
+    const abiPath = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'abis',
+      'FlightInsurance.json',
+    );
+    const abiJson = JSON.parse(fs.readFileSync(abiPath, 'utf8'));
+    const address = process.env.FLIGHT_CONTRACT_ADDRESS;
+    return {
+      abi: abiJson.abi,
+      address,
+    };
   }
 }
