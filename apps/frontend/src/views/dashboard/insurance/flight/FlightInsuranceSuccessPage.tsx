@@ -6,6 +6,7 @@ import { CheckCircle, FileText, Home, ExternalLink, Clock } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
+import { uuidV4, randomBytes } from "ethers";
 
 export default function FlightInsuranceSuccessPage() {
   const searchParams = useSearchParams();
@@ -23,7 +24,7 @@ export default function FlightInsuranceSuccessPage() {
   }, []);
 
   // Fallbacks if no data found
-  const policyId = "CS-FLT-2025-00042";
+  const policyId = uuidV4(randomBytes(16));
   const flightNumber = policyDraft?.flightNumber || "N/A";
   const departureDate = policyDraft
     ? `${policyDraft.flightDate} ${policyDraft.depTime}`

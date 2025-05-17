@@ -57,14 +57,14 @@ const formSchema = z.object({
   coverageTier: z.enum(["tier1", "tier2", "tier3"], {
     required_error: "Please select a coverage tier",
   }),
-  coverageAmount: z.number().min(0.1).max(0.5),
+  coverageAmount: z.number().min(0.05).max(0.5),
   numPersons: z.number().min(1, "At least 1 person"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 const tierToAmount: Record<string, number> = {
-  tier1: 0.02,
+  tier1: 0.05,
   tier2: 0.1,
   tier3: 0.25,
 };
@@ -76,7 +76,9 @@ export function FlightDetailsForm({
 }) {
   const router = useRouter();
   const backendURL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api";
+    process.env.NODE_ENV === "production"
+      ? process.env.NEXT_PUBLIC_BACKEND_URL
+      : "http://localhost:3001/api";
   const [ethToThb, setEthToThb] = useState<number | null>(null);
 
   // Store both premiumPerPerson and totalPremium
@@ -134,11 +136,26 @@ export function FlightDetailsForm({
   }, [form]);
 
   // Remove auto premium calculation here
-
   const onSubmit = async (data: FormValues) => {
     try {
-      // Calculate premium only on submit
-      const estimateRes = await axios.get(
+      // Validate input data before making the API call
+      if (
+        !data.airline ||
+        !data.depAirport ||
+        !data.arrAirport ||
+        !data.depTime ||
+        !data.flightDate ||
+        !data.depCountry ||
+        !data.arrCountry ||
+        !data.coverageAmount ||
+        !data.numPersons
+      ) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+
+      // Make API call to estimate premium
+      const response = await axios.get(
         `${backendURL}/flight-insurance/estimate-premium`,
         {
           params: {
@@ -154,32 +171,42 @@ export function FlightDetailsForm({
           },
         }
       );
+
+      const { premiumPerPerson, totalPremium, probability } = response.data;
+
+      // Update premium state
       setPremium({
-        premiumPerPerson: estimateRes.data.premiumPerPerson,
-        totalPremium: estimateRes.data.totalPremium,
-        probability: estimateRes.data.probability,
+        premiumPerPerson,
+        totalPremium,
+        probability,
       });
 
-      // Include premiumPerPerson and totalPremium in submission
+      // Prepare submission data
       const submission = {
         ...data,
-        premiumPerPerson: estimateRes.data.premiumPerPerson,
-        totalPremium: estimateRes.data.totalPremium,
-        probability: estimateRes.data.probability,
+        premiumPerPerson,
+        totalPremium,
+        probability,
       };
 
-      // Store in localStorage
+      // Save submission data to localStorage
       localStorage.setItem("flightPolicyDraft", JSON.stringify(submission));
 
+      // Redirect to review policy page after a short delay
       setTimeout(() => {
         router.push("/dashboard/insurance/flight/apply/review-policy");
       }, 3000);
-    } catch (err) {
+    } catch (error) {
+      console.error("Error estimating premium:", error);
+
+      // Reset premium state on error
       setPremium({
         premiumPerPerson: null,
         totalPremium: null,
         probability: null,
       });
+
+      // Display user-friendly error message
       alert(
         "Failed to estimate premium. Please check your input and try again."
       );
@@ -461,9 +488,9 @@ export function FlightDetailsForm({
                             Basic Coverage
                           </Label>
                           <p className="text-gray-500">
-                            0.02 ETH payout (
+                            0.05 ETH payout (
                             {ethToThb !== null
-                              ? `${(0.02 * ethToThb).toLocaleString()} THB`
+                              ? `${(0.05 * ethToThb).toLocaleString()} THB`
                               : "N/A"}
                             )
                           </p>
@@ -599,28 +626,25 @@ export function FlightDetailsForm({
                           Estimated Premium
                         </p>
                         <p className="text-lg font-semibold text-green-900">
-                          {premium.premiumPerPerson} ETH per person
+                          {premium.premiumPerPerson.toFixed(2)} ETH per person
                           <span className="text-sm font-normal text-green-700 ml-3">
                             {ethToThb !== null && (
                               <>
                                 ≈{" "}
-                                {(
-                                  premium.premiumPerPerson * ethToThb
-                                ).toLocaleString()}{" "}
+                                {(premium.premiumPerPerson * ethToThb).toFixed(
+                                  2
+                                )}{" "}
                                 THB
                               </>
                             )}
                           </span>
                         </p>
                         <p className="text-sm text-green-700">
-                          Total: {premium.totalPremium} ETH
+                          Total: {premium.totalPremium.toFixed(2)} ETH
                           <span className="ml-3">
                             {ethToThb !== null && (
                               <>
-                                ≈{" "}
-                                {(
-                                  premium.totalPremium * ethToThb
-                                ).toLocaleString()}{" "}
+                                ≈ {(premium.totalPremium * ethToThb).toFixed(2)}{" "}
                                 THB
                               </>
                             )}

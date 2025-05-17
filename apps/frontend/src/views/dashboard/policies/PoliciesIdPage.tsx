@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import apiService from "@/utils/apiService";
 import {
   Card,
   CardContent,
@@ -50,10 +50,9 @@ export default function PoliciesIdPage({
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(
-          `http://localhost:3001/api/user/policy?walletAddress=${walletAddress}&policyId=${policyId}`
+        const data = await apiService.get<any>(
+          `/user/policy?walletAddress=${walletAddress}&policyId=${policyId}`
         );
-        const data = await res.json();
         console.log("API response:", data);
         let found = null;
         if (Array.isArray(data)) {

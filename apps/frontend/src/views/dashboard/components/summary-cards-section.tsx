@@ -5,6 +5,7 @@ import { ShieldCheck, FileText, Zap } from "lucide-react";
 import SummaryCard from "./summary-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import apiService from "@/utils/apiService";
 
 type PolicySummary = {
   _count: { status: number };
@@ -18,10 +19,9 @@ export default function SummaryCardsSection() {
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const res = await fetch(
-          "http://localhost:3001/api/user/policy/summary"
+        const data = await apiService.get<PolicySummary[]>(
+          "/user/policy/summary"
         );
-        const data: PolicySummary[] = await res.json();
         setActivePolicies(
           data.find((item) => item.status === "Active")?._count.status || 0
         );

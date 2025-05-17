@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import {
   Card,
   CardContent,
@@ -32,69 +31,55 @@ import {
   Wallet,
   Coins,
 } from "lucide-react";
+import apiService from "@/utils/apiService";
 
-export default function AccountPage() {
-  const { data: session } = useSession();
+export default function AccountPage({
+  walletAddress,
+  accessToken,
+}: {
+  walletAddress: string;
+  accessToken: string;
+}) {
   const [copied, setCopied] = useState(false);
-  const [walletAddress, setWalletAddress] = useState(
-    "0xc724B6892AAbC09e5f4e053717c4F37e32484a08"
-  );
   const [ethBalance, setEthBalance] = useState<string | null>(null);
   const [ethPriceThb, setEthPriceThb] = useState<number | null>(null);
-  const [profile, setProfile] = useState<any>(null); // <-- Add profile state
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/api/wallet/balance`, {
-          headers: {
-            "wallet-address": walletAddress,
-            Authorization: session
-              ? `Bearer ${session?.user?.accessToken}`
-              : "",
-          },
-        });
-        if (!res.ok) throw new Error("Failed to fetch wallet balance");
-        const data = await res.json();
-        if (data.status === "success") {
-          setEthBalance(data.data.balance.ether.value.toString());
-          console.log(data.data.balance.ether.value.toString());
-        } else {
-          setEthBalance(null);
-        }
+        const res = await apiService.get<any>("/wallet/balance", accessToken);
+        setEthBalance(res?.data?.balance?.ether?.value.toString());
       } catch (err) {
         console.error("Fetch error:", err);
         setEthBalance(null);
       }
     };
     fetchBalance();
-  }, [walletAddress, session]);
+  }, [walletAddress, accessToken]);
 
   // Fetch ETH price in THB
   useEffect(() => {
     const fetchEthPrice = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/price/eththb");
-        if (!res.ok) throw new Error("Failed to fetch ETH price");
-        const data = await res.json();
-        setEthPriceThb(Number(data.ethToThb));
+        const data = await apiService.get<any>("/price/eththb", accessToken);
+        console.log("ETH Price Response:", data);
+        setEthPriceThb(Number(data?.ethToThb));
       } catch (err) {
         console.error("Fetch error:", err);
         setEthPriceThb(null);
       }
     };
     fetchEthPrice();
-  }, []);
+  }, [accessToken]);
 
   // Fetch user profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch(
-          `http://localhost:3001/api/user/profile?walletAddress=${walletAddress}`
+        const data = await apiService.get<any>(
+          `/user/profile?walletAddress=${walletAddress}`
         );
-        if (!res.ok) throw new Error("Failed to fetch profile");
-        const data = await res.json();
         setProfile(data);
       } catch (err) {
         console.error("Fetch error:", err);

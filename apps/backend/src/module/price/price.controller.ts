@@ -4,14 +4,17 @@ import {
   Post,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { PriceService } from './price.service';
+import { JwtGuard } from '../auth/guards';
 
 @Controller('price')
 export class PriceController {
   constructor(private readonly priceService: PriceService) {}
 
   @Get('eththb')
+  // @UseGuards(JwtGuard)
   async getEthToThb() {
     try {
       const ethToThb = await this.priceService.getEthToThb();

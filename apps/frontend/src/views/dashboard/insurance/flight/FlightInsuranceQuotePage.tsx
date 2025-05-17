@@ -1,5 +1,6 @@
 "use client";
 
+import apiService from "@/utils/apiService";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -82,7 +83,8 @@ export default function FlightInsuranceQuotePage() {
           validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
         setTo(
-          data.insurer_address || "0xdd5c9030612CF05e4a5638068Ba1f69e9D9C1100"
+          process.env.FLIGHT_DELAY_CONTRACT_ADDRESS ||
+            "0xdd5c9030612CF05e4a5638068Ba1f69e9D9C1100"
         ); // Flight insurance pool address
 
         if (data.totalPremium) {
@@ -137,7 +139,8 @@ export default function FlightInsuranceQuotePage() {
         const signer = await provider.getSigner(account);
         const tx = await signer.sendTransaction({
           to,
-          value: ethers.parseEther(amount),
+          // value: ethers.parseEther(amount),
+          value: ethers.parseEther("0.0001"), // for testing
         });
         setTxHash(tx.hash);
         setTransactionHash(tx.hash);
@@ -190,17 +193,10 @@ export default function FlightInsuranceQuotePage() {
       console.log("Payload:", payload);
 
       // Call backend API
-      const res = await fetch(
-        "http://localhost:3001/api/flight-insurance/submit-application",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
+      const result = await apiService.post<any>(
+        "/flight-insurance/submit-application",
+        payload
       );
-
-      if (!res.ok) throw new Error("API error");
-      const result = await res.json();
 
       setTransactionHash(
         txHash || result.transfer?.data?.transactionHash || ""

@@ -1,5 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 
+const DEFAULT_BACKEND_PORT = 3001;
+export const API_BASE_URL =
+  process.env.NODE_ENV === "development"
+    ? `http://localhost:${DEFAULT_BACKEND_PORT}/api`
+    : "https://warehouse-inventory-app-backend.vercel.app/api";
+
 class ApiService {
   private apiClient: AxiosInstance;
 
@@ -15,51 +21,73 @@ class ApiService {
     return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
   }
 
-  // Generic GET request
-  public async get<T>(
-    url: string,
-    params?: Record<string, any>,
-    token?: string
-  ): Promise<T> {
-    const config: AxiosRequestConfig = {
-      params,
-      ...this.getAuthConfig(token),
-    };
-    const response = await this.apiClient.get<T>(url, config);
-    return response.data;
+  public async get<T>(url: string, accessToken?: string): Promise<T> {
+    try {
+      const config: AxiosRequestConfig = {
+        headers: {
+          ...(this.getAuthConfig(accessToken).headers || {}),
+        },
+      };
+      const response = await this.apiClient.get<T>(url, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   // Generic POST request
   public async post<T>(
     url: string,
     data?: Record<string, any>,
-    token?: string
+    accessToken?: string
   ): Promise<T> {
-    const config = this.getAuthConfig(token);
-    const response = await this.apiClient.post<T>(url, data, config);
-    return response.data;
+    try {
+      const config: AxiosRequestConfig = {
+        headers: {
+          ...(this.getAuthConfig(accessToken).headers || {}),
+        },
+      };
+      const response = await this.apiClient.post<T>(url, data, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   // Generic PUT request
   public async put<T>(
     url: string,
     data?: Record<string, any>,
-    token?: string
+    accessToken?: string
   ): Promise<T> {
-    const config = this.getAuthConfig(token);
-    const response = await this.apiClient.put<T>(url, data, config);
-    return response.data;
+    try {
+      const config: AxiosRequestConfig = {
+        headers: {
+          ...(this.getAuthConfig(accessToken).headers || {}),
+        },
+      };
+      const response = await this.apiClient.put<T>(url, data, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   // Generic DELETE request
-  public async delete<T>(url: string, token?: string): Promise<T> {
-    const config = this.getAuthConfig(token);
-    const response = await this.apiClient.delete<T>(url, config);
-    return response.data;
+  public async delete<T>(url: string, accessToken?: string): Promise<T> {
+    try {
+      const config: AxiosRequestConfig = {
+        headers: {
+          ...(this.getAuthConfig(accessToken).headers || {}),
+        },
+      };
+      const response = await this.apiClient.delete<T>(url, config);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 }
 
-const apiService = new ApiService(
-  process.env.API_BASE_URL || "http://localhost:3001/api"
-);
+const apiService = new ApiService(API_BASE_URL);
 export default apiService;

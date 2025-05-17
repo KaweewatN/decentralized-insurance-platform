@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import apiService from "@/utils/apiService";
 import PolicyFilters from "./components/policy-filters";
 import PolicyCard from "./components/policy-card";
 import EmptyPolicies from "./components/empty-policies";
@@ -29,20 +30,21 @@ export default function PoliciesPage({
   const policiesPerPage = 4;
 
   useEffect(() => {
-    fetch(
-      `http://localhost:3001/api/user/policy?walletAddress=${walletAddress}`
-    )
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchPolicies = async () => {
+      try {
+        const data = await apiService.get<any>(
+          `/user/policy?walletAddress=${walletAddress}`
+        );
         const mapped = Array.isArray(data) ? data.map(mapApiPolicyToCard) : [];
         setPolicies(mapped);
         setFilteredPolicies(mapped);
-      })
-      .catch(() => {
+      } catch {
         setPolicies([]);
         setFilteredPolicies([]);
-      });
-  }, []);
+      }
+    };
+    fetchPolicies();
+  }, [walletAddress]);
 
   // Filter policies based on selected filters
   const handleFilterChange = (filters: {

@@ -150,28 +150,28 @@ export class OracleFlightService {
             });
 
             // 3. Transfer payout to user
-            try {
-              const fromWallet = process.env.ORACLE_WALLET_ADDRESS!;
-              const privateKey = process.env.ORACLE_WALLET_PRIVATE_KEY!;
-              const toWallet = updated.holder;
-              const value = Number(updated.payoutAmount);
+            // try {
+            //   const fromWallet = process.env.ORACLE_WALLET_ADDRESS!;
+            //   const privateKey = process.env.ORACLE_WALLET_PRIVATE_KEY!;
+            //   const toWallet = updated.holder;
+            //   const value = Number(updated.payoutAmount);
 
-              await axios.post('http://localhost:3001/api/wallet/transfer', {
-                fromWallet,
-                privateKey,
-                toWallet,
-                value,
-              });
+            //   await axios.post('http://localhost:3001/api/wallet/transfer', {
+            //     fromWallet,
+            //     privateKey,
+            //     toWallet,
+            //     value,
+            //   });
 
-              this.logger.log(
-                `💸 Transferred ${value} to ${toWallet} for policy ${policyId}`,
-              );
-            } catch (transferErr) {
-              this.logger.error(
-                `❌ Error transferring payout for policy ${policyId}:`,
-                transferErr,
-              );
-            }
+            //   this.logger.log(
+            //     `💸 Transferred ${value} to ${toWallet} for policy ${policyId}`,
+            //   );
+            // } catch (transferErr) {
+            //   this.logger.error(
+            //     `❌ Error transferring payout for policy ${policyId}:`,
+            //     transferErr,
+            //   );
+            // }
 
             this.logger.log(
               `📝 Policy ${policyId} marked as claimed and claim inserted.`,
