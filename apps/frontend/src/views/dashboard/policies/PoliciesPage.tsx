@@ -89,7 +89,7 @@ export default function PoliciesPage({
 
   return (
     <>
-      <main className="container px-2 md:px-8 lg:px-16 py-8 mx-auto bg-[#F4F6F8]">
+      <main className="container px-2 sm:px-8 md:px-20 lg:px-40 py-8 mx-auto bg-[#F4F6F8]">
         <h1 className="mb-6 text-3xl font-bold text-[#212529]">
           My Insurance Policies
         </h1>

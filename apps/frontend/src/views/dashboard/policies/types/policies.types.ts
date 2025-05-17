@@ -22,6 +22,7 @@ export interface PolicyDetailsProps {
   endDate: string;
   premium: string;
   coverageAmount: string;
+  sumAssured: string;
   policyHolder: {
     name: string;
     walletAddress: string;

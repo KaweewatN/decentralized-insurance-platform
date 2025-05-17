@@ -22,6 +22,7 @@ export class FlightInsuranceService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly web3Service: Web3Service,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   private airlineRisk = airlineRisk;
@@ -128,8 +129,7 @@ export class FlightInsuranceService {
     if (!insurancePoolWallet)
       throw new Error('Insurance pool wallet not configured');
 
-    // Transfer premium from user to insurance pool
-    // Use Frontend to sign the transaction
+    //// Use Frontend to sign the transaction /////
     // const transferResult = await this.web3Service.transfer(
     //   application.walletAdress,
     //   userPrivateKey,
@@ -145,7 +145,14 @@ export class FlightInsuranceService {
     coverageEndDate.setDate(coverageEndDate.getDate() + 1);
 
     // Mock planTypeId (should map to your PolicyType table)
-    const planTypeId = 1;
+    const planTypeId = 2;
+
+    // Upload the document using Supabase service
+    const documentUrl = await this.supabaseService.uploadDocumentBase64(
+      application.fileUpload,
+      `${application.depAirport}-${application.arrAirport}-${application.flightDate}`,
+      application.walletAdress,
+    );
 
     // Create Policy in DB
     const policy = await this.prisma.policy.create({
@@ -159,7 +166,7 @@ export class FlightInsuranceService {
         coverageEndDate,
         transactionHash: application.transactionHash,
         contractAddress: insurancePoolWallet,
-        documentUrl: null,
+        documentUrl, // Store the uploaded document URL
         planTypeId,
         createdAt: new Date(),
         updatedAt: new Date(),

@@ -11,7 +11,7 @@ export default function mapApiPolicyToCard(policy: any): PolicyCardProps {
           ? "flight"
           : "rainfall", // Adjust as needed
     status: policy.status.toLowerCase().replace(/([a-z])([A-Z])/g, "$1-$2"), // e.g. "PendingPayment" -> "pending-payment"
-    coverageDetail: `$${policy.coverageAmount}`,
+    coverageDetail: `${policy.coverageAmount} ETH`,
     startDate: new Date(policy.coverageStartDate).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",

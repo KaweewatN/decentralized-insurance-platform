@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import apiService from "@/utils/apiService";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -42,6 +43,7 @@ export default function PoliciesIdPage({
   policyId: string;
 }) {
   const [policy, setPolicy] = useState<PolicyDetailsProps | null>(null);
+  const [ethToThb, setEthToThb] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +77,20 @@ export default function PoliciesIdPage({
       }
     };
 
+    const fetchEthToThbPrice = async () => {
+      try {
+        const response = await apiService.get<{ ethToThb: number }>(
+          `/price/eththb`
+        );
+        setEthToThb(response.ethToThb);
+        console.log("ETH to THB price:", response.ethToThb);
+      } catch (err) {
+        console.error("Failed to fetch ETH to THB price:", err);
+      }
+    };
+
     fetchPolicyDetails();
+    fetchEthToThbPrice();
   }, [policyId, walletAddress]);
 
   const getPolicyIcon = () => {
@@ -360,6 +375,26 @@ export default function PoliciesIdPage({
                   </div>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Document Attached</CardTitle>
+                  <CardDescription>
+                    Document related to the policy
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative max-w-full h-auto rounded overflow-hidden">
+                    <Image
+                      src={policy.documentUrl || "/placeholder.png"}
+                      alt="Policy Document"
+                      width={600} // Replace with the actual width of the image
+                      height={400} // Replace with the actual height of the image
+                      className="rounded"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="coverage" className="space-y-6">
@@ -374,13 +409,33 @@ export default function PoliciesIdPage({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1">
                       <p className="text-sm text-gray-500">Coverage Amount</p>
-                      <p className="text-2xl font-bold text-[#0D47A1]">
-                        {policy.coverageAmount} THB
-                      </p>
+                      <div className="flex items-center gap-x-5">
+                        <p className="text-2xl font-bold text-primary">
+                          {policy.coverageAmount} ETH
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          ≈ ฿{" "}
+                          {policy.coverageAmount && ethToThb
+                            ? (
+                                Number(policy.coverageAmount) * ethToThb
+                              ).toFixed(4)
+                            : ""}
+                        </p>
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-gray-500">Premium</p>
-                      <p className="text-2xl font-bold">{policy.premium} ETH</p>
+                      <div className="flex items-center gap-x-5">
+                        <p className="text-2xl font-bold ">
+                          {policy.sumAssured} ETH
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          ≈ ฿{" "}
+                          {policy.sumAssured && ethToThb
+                            ? (Number(policy.sumAssured) * ethToThb).toFixed(4)
+                            : ""}
+                        </p>
+                      </div>
                     </div>
                   </div>
 

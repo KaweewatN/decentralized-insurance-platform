@@ -186,6 +186,7 @@ export default function FlightInsuranceQuotePage() {
         depCountry: draft.depCountry,
         arrCountry: draft.arrCountry,
         numPersons: draft.numPersons,
+        fileUpload: draft.fileUpload,
         transactionHash: txHash,
         walletAccount: account,
       };

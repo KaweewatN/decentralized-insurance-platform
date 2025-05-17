@@ -103,6 +103,10 @@ export default function mapApiPolicyToDetails(policy: any): PolicyDetailsProps {
     typeof policy.coverageAmount === "number"
       ? `$${policy.coverageAmount}`
       : policy.coverageAmount || "";
+  const sumAssured =
+    typeof policy.sumAssured === "number"
+      ? `$${policy.sumAssured}`
+      : policy.sumAssured || "";
 
   return {
     id: policy.id?.toString() || "",
@@ -112,6 +116,7 @@ export default function mapApiPolicyToDetails(policy: any): PolicyDetailsProps {
     startDate,
     endDate,
     premium,
+    sumAssured,
     coverageAmount,
     policyHolder,
     blockchain,

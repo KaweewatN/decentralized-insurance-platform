@@ -15,6 +15,7 @@ import {
   Globe,
   Calendar,
   Clock,
+  File as FileIcon,
 } from "lucide-react";
 import {
   Card,
@@ -59,6 +60,16 @@ const formSchema = z.object({
   }),
   coverageAmount: z.number().min(0.05).max(0.5),
   numPersons: z.number().min(1, "At least 1 person"),
+  fileUpload: z
+    .instanceof(File)
+    .refine(
+      (file) =>
+        file.type === "application/pdf" ||
+        file.type === "image/png" ||
+        file.type === "image/jpeg" ||
+        file.type === "image/jpg",
+      "Only PDF or PNG files are allowed"
+    ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -81,7 +92,6 @@ export function FlightDetailsForm({
       : "http://localhost:3001/api";
   const [ethToThb, setEthToThb] = useState<number | null>(null);
 
-  // Store both premiumPerPerson and totalPremium
   const [premium, setPremium] = useState<{
     premiumPerPerson: number | null;
     totalPremium: number | null;
@@ -103,12 +113,14 @@ export function FlightDetailsForm({
       coverageTier: "tier2",
       coverageAmount: 0.1,
       numPersons: undefined,
+      fileUpload: undefined,
     },
   });
 
   const isSubmitting = form.formState.isSubmitting;
 
-  // Fetch ETH to THB rate
+  console.log("Form values:", form.getValues());
+
   useEffect(() => {
     const fetchRate = async () => {
       try {
@@ -121,7 +133,6 @@ export function FlightDetailsForm({
     fetchRate();
   }, []);
 
-  // Sync coverageAmount with coverageTier
   useEffect(() => {
     const subscription = form.watch((values, { name }) => {
       if (name === "coverageTier" && values.coverageTier) {
@@ -132,13 +143,10 @@ export function FlightDetailsForm({
       }
     });
     return () => subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
-  // Remove auto premium calculation here
   const onSubmit = async (data: FormValues) => {
     try {
-      // Validate input data before making the API call
       if (
         !data.airline ||
         !data.depAirport ||
@@ -154,7 +162,19 @@ export function FlightDetailsForm({
         return;
       }
 
-      // Make API call to estimate premium
+      let fileUploadBase64: string | undefined = undefined;
+      if (data.fileUpload) {
+        const reader = new FileReader();
+        const file = data.fileUpload;
+
+        // Convert file to Base64
+        fileUploadBase64 = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject("Failed to read file");
+          reader.readAsDataURL(file);
+        });
+      }
+
       const response = await axios.get(
         `${backendURL}/flight-insurance/estimate-premium`,
         {
@@ -174,39 +194,35 @@ export function FlightDetailsForm({
 
       const { premiumPerPerson, totalPremium, probability } = response.data;
 
-      // Update premium state
       setPremium({
         premiumPerPerson,
         totalPremium,
         probability,
       });
 
-      // Prepare submission data
       const submission = {
         ...data,
+        fileUpload: fileUploadBase64, // Store the file as a Base64 string
         premiumPerPerson,
         totalPremium,
         probability,
       };
 
-      // Save submission data to localStorage
+      // Store the submission object in localStorage
       localStorage.setItem("flightPolicyDraft", JSON.stringify(submission));
 
-      // Redirect to review policy page after a short delay
       setTimeout(() => {
         router.push("/dashboard/insurance/flight/apply/review-policy");
       }, 3000);
     } catch (error) {
       console.error("Error estimating premium:", error);
 
-      // Reset premium state on error
       setPremium({
         premiumPerPerson: null,
         totalPremium: null,
         probability: null,
       });
 
-      // Display user-friendly error message
       alert(
         "Failed to estimate premium. Please check your input and try again."
       );
@@ -448,6 +464,38 @@ export function FlightDetailsForm({
                   )}
                 />
               </div>
+
+              {/* File Upload */}
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-[#212529]">
+                  Upload Supporting Document
+                </h2>
+                <FormField
+                  control={form.control}
+                  name="fileUpload"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Upload PDF or PNG</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="file"
+                            accept=".pdf,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              field.onChange(file || undefined); // Update form state
+                            }}
+                            className="pl-10 cursor-pointer"
+                          />
+                          <FileIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               {/* Coverage Options */}
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-[#212529]">
