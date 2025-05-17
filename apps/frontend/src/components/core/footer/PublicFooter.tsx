@@ -1,129 +1,113 @@
 import Link from "next/link";
-import { Shield } from "lucide-react";
+import { Twitter, Github, Linkedin } from "lucide-react";
 
-export default function PublicFooter() {
+export default function Footer() {
   return (
-    <footer className="border-t py-12">
-      <div className="container px-4 md:px-6">
+    <footer className="py-12 bg-[#0D47A1] text-white">
+      <div className="container px-4 mx-auto">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">ChainSure</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Decentralized insurance for the digital age, powered by blockchain
-              technology.
+          <div>
+            <h3 className="mb-4 text-xl font-bold">ChainSure</h3>
+            <p className="mb-4 text-sm text-gray-200">
+              Decentralized insurance platform powered by blockchain technology.
             </p>
+            <div className="flex space-x-4">
+              <Link href="#" className="text-white hover:text-gray-200">
+                <Twitter className="w-5 h-5" />
+                <span className="sr-only">Twitter</span>
+              </Link>
+              <Link href="#" className="text-white hover:text-gray-200">
+                <Github className="w-5 h-5" />
+                <span className="sr-only">GitHub</span>
+              </Link>
+              <Link href="#" className="text-white hover:text-gray-200">
+                <Linkedin className="w-5 h-5" />
+                <span className="sr-only">LinkedIn</span>
+              </Link>
+            </div>
           </div>
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Platform</h3>
-            <ul className="space-y-2">
+
+          <div>
+            <h3 className="mb-4 text-lg font-semibold">Products</h3>
+            <ul className="space-y-2 text-sm text-gray-200">
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  How It Works
+                <Link href="#" className="hover:text-white">
+                  Health Insurance
                 </Link>
               </li>
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  Insurance Pools
+                <Link href="#" className="hover:text-white">
+                  Flight Delay Insurance
                 </Link>
               </li>
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  Policyholder Dashboard
+                <Link href="#" className="hover:text-white">
+                  Rainfall Insurance
                 </Link>
               </li>
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  File a Claim
+                <Link href="#" className="hover:text-white">
+                  Custom Solutions
                 </Link>
               </li>
             </ul>
           </div>
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Resources</h3>
-            <ul className="space-y-2">
+
+          <div>
+            <h3 className="mb-4 text-lg font-semibold">Resources</h3>
+            <ul className="space-y-2 text-sm text-gray-200">
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
+                <Link href="#" className="hover:text-white">
                   Documentation
                 </Link>
               </li>
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  Smart Contracts
+                <Link href="#" className="hover:text-white">
+                  Whitepaper
                 </Link>
               </li>
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  Security Audits
+                <Link href="#" className="hover:text-white">
+                  API
                 </Link>
               </li>
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  FAQ
+                <Link href="#" className="hover:text-white">
+                  Community
                 </Link>
               </li>
             </ul>
           </div>
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Legal</h3>
-            <ul className="space-y-2">
+
+          <div>
+            <h3 className="mb-4 text-lg font-semibold">Legal</h3>
+            <ul className="space-y-2 text-sm text-gray-200">
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
+                <Link href="#" className="hover:text-white">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
+                <Link href="#" className="hover:text-white">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
+                <Link href="#" className="hover:text-white">
                   Cookie Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="#" className="hover:text-white">
+                  Contact Us
                 </Link>
               </li>
             </ul>
           </div>
         </div>
-        <div className="mt-12 pt-8 border-t">
-          <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ChainSure. All rights reserved.
-          </p>
+
+        <div className="pt-8 mt-8 text-sm text-center text-gray-200 border-t border-gray-700">
+          <p>© 2025 ChainSure. All Rights Reserved.</p>
         </div>
       </div>
     </footer>

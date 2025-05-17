@@ -10,7 +10,12 @@ export class WalletService {
   async getBalance() {
     return this.web3Service.balance();
   }
-  async setTransfer(toWallet: string, value: number) {
-    return this.web3Service.transfer(toWallet, value);
+  async setTransfer(
+    fromWallet: string,
+    privateKey: string,
+    toWallet: string,
+    value: number,
+  ) {
+    return this.web3Service.transfer(fromWallet, privateKey, toWallet, value);
   }
 }

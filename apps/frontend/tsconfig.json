@@ -26,7 +26,7 @@
       "@hooks/*": ["src/hooks/*"],
       "@utils/*": ["src/utils/*"],
       "@libs/*": ["src/libs/*"],
-      "@pages/*": ["src/pages/*"]
+      "@pages/*": ["src/views/*"]
     }
   },
   "include": [

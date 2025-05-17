@@ -8,9 +8,9 @@ dotenv.config();
 const contractJson = require('../abis/FlightInsurance.json');
 
 // ✅ Setup
-const backendURL = 'http://localhost:3001';
+const backendURL = 'http://localhost:3001/api';
 const provider = new JsonRpcProvider(process.env.SEPOLIA_RPC);
-const userWallet = new Wallet(process.env.ORACLE_WALLET_PRIVATE_KEY!, provider);
+const userWallet = new Wallet(process.env.PRIVATE_KEY!, provider);
 const contract = new Contract(
   process.env.FLIGHT_CONTRACT_ADDRESS!,
   contractJson.abi,

@@ -18,11 +18,21 @@ export class WalletController {
   }
 
   @Post('transfer')
-  @UseGuards(JwtGuard)
+  // @UseGuards(JwtGuard)
   setTransfer(
+    @Body('fromWallet') fromWallet: string,
+    @Body('privateKey') privateKey: string,
     @Body('toWallet') toWallet: string,
     @Body('value') value: number,
   ) {
-    return this.walletService.setTransfer(toWallet, value);
+    if (!fromWallet || !privateKey || !toWallet || value === undefined) {
+      throw new Error('Missing required transfer parameters');
+    }
+    return this.walletService.setTransfer(
+      fromWallet,
+      privateKey,
+      toWallet,
+      value,
+    );
   }
 }

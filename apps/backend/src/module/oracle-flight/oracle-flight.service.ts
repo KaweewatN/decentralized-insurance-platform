@@ -2,31 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ethers } from 'ethers';
 import * as contractJson from 'abis/FlightInsurance.json';
+import { PrismaService } from 'src/service/prisma/prisma.service';
+import { PolicyStatus, ClaimType } from '@prisma/client';
+import axios from 'axios';
 
 @Injectable()
 export class OracleFlightService {
   private readonly logger = new Logger(OracleFlightService.name);
   private contract: ethers.Contract;
 
-  constructor() {
-    const sepoliaRpc = process.env.SEPOLIA_RPC;
-    const privateKey = process.env.ORACLE_WALLET_PRIVATE_KEY;
-    const contractAddress = process.env.FLIGHT_CONTRACT_ADDRESS;
-
-    if (!sepoliaRpc || !privateKey || !contractAddress) {
-      throw new Error('❌ Missing required environment variables.');
-    }
-
-    const provider = new ethers.JsonRpcProvider(sepoliaRpc);
-    const wallet = new ethers.Wallet(privateKey, provider);
-    this.contract = new ethers.Contract(
-      contractAddress,
-      contractJson.abi,
-      wallet,
-    );
-  }
-
-  // Mock delay and flight times
+  // Mock delay and flight times for testing
   private mockDelays: Record<number, number> = {
     0: 150, // ✅ Flight 1 day ago → partial payout
     1: 300, // ✅ Flight 1 day ago → full payout
@@ -69,7 +54,25 @@ export class OracleFlightService {
     14: Math.floor(Date.now() / 1000) - 1.5 * 86400, // 1.5 days ago → process
   };
 
-  @Cron('* * * * *') // Every hour at minute 0
+  constructor(private readonly prisma: PrismaService) {
+    const sepoliaRpc = process.env.SEPOLIA_RPC;
+    const privateKey = process.env.ORACLE_WALLET_PRIVATE_KEY;
+    const contractAddress = process.env.FLIGHT_CONTRACT_ADDRESS;
+
+    if (!sepoliaRpc || !privateKey || !contractAddress) {
+      throw new Error('❌ Missing required environment variables.');
+    }
+
+    const provider = new ethers.JsonRpcProvider(sepoliaRpc);
+    const wallet = new ethers.Wallet(privateKey, provider);
+    this.contract = new ethers.Contract(
+      contractAddress,
+      contractJson.abi,
+      wallet,
+    );
+  }
+
+  @Cron('0 * * * *') // Every hour at minute 0
   async handleScheduledChecks() {
     this.logger.log('🔁 Running scheduled flight status check...');
 
@@ -88,7 +91,7 @@ export class OracleFlightService {
         const delay = this.mockDelays[policyId] ?? 0;
 
         this.logger.log(
-          `🔍 Policy ${policyId} status=${status}, flightTime=${flightTime}, now=${now}`,
+          `🔍 Policy ${policyId} status=${status} (${this.getStatusLabel(status)}), flightTime=${flightTime}, now=${now}`,
         );
 
         if (status !== 0) continue; // Skip non-active policies
@@ -99,7 +102,8 @@ export class OracleFlightService {
           continue;
         }
 
-        const isExpired = now > flightTime + 2 * 86400;
+        // const isExpired = now > flightTime + 2 * 86400;
+        const isExpired = now >= flightTime + 2 * 86400;
 
         this.logger.log(
           `🧪 Checking policy ${policyId} → delay=${delay}, mockFlightTime=${flightTime}, isExpired=${isExpired}`,
@@ -122,6 +126,57 @@ export class OracleFlightService {
           const updated = await this.contract.policies(policyId);
           this.logger.log(`✅ Processed policy ${policyId}`);
           this.logger.log(`🎯 eligibleForPayout: ${updated.eligibleForPayout}`);
+
+          // If eligible for payout, update DB
+          if (updated.eligibleForPayout) {
+            // 1. Update policy status to 'claimed'
+            await this.prisma.policy.update({
+              where: { id: policyId },
+              data: { status: PolicyStatus.Claimed },
+            });
+
+            // 2. Insert new claim
+            await this.prisma.claim.create({
+              data: {
+                walletAddress: updated.holder,
+                policyId: policyId,
+                amount: updated.payoutAmount,
+                transactionHash: tx.hash,
+                contractAddress: this.contract.target.toString(),
+                type: ClaimType.FLIGHT,
+                status: 'Approved',
+                approvedDate: new Date(),
+              },
+            });
+
+            // 3. Transfer payout to user
+            // try {
+            //   const fromWallet = process.env.ORACLE_WALLET_ADDRESS!;
+            //   const privateKey = process.env.ORACLE_WALLET_PRIVATE_KEY!;
+            //   const toWallet = updated.holder;
+            //   const value = Number(updated.payoutAmount);
+
+            //   await axios.post('http://localhost:3001/api/wallet/transfer', {
+            //     fromWallet,
+            //     privateKey,
+            //     toWallet,
+            //     value,
+            //   });
+
+            //   this.logger.log(
+            //     `💸 Transferred ${value} to ${toWallet} for policy ${policyId}`,
+            //   );
+            // } catch (transferErr) {
+            //   this.logger.error(
+            //     `❌ Error transferring payout for policy ${policyId}:`,
+            //     transferErr,
+            //   );
+            // }
+
+            this.logger.log(
+              `📝 Policy ${policyId} marked as claimed and claim inserted.`,
+            );
+          }
         }
       } catch (err: any) {
         this.logger.error(
@@ -133,5 +188,19 @@ export class OracleFlightService {
 
     this.logger.log('✅ Scheduled check complete.');
     this.logger.log(`📦 Total policies found: ${totalPolicies}`);
+  }
+
+  // Helper function to get status label
+  private getStatusLabel(status: number): string {
+    switch (status) {
+      case 0:
+        return 'Active';
+      case 1:
+        return 'Claimed';
+      case 2:
+        return 'Expired';
+      default:
+        return 'Unknown';
+    }
   }
 }

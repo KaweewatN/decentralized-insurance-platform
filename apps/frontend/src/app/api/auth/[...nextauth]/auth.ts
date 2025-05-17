@@ -1,6 +1,12 @@
 import { NextAuthOptions, getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+const DEFAULT_BACKEND_PORT = 3001;
+export const API_BASE_URL =
+  process.env.NODE_ENV === "development"
+    ? `http://localhost:${DEFAULT_BACKEND_PORT}/api`
+    : "https://warehouse-inventory-app-backend.vercel.app/api";
+
 export type AuthResponse = {
   session: any;
   response: "Session found";
@@ -36,19 +42,15 @@ export const authOptions: NextAuthOptions = {
         if (!credentials) return null;
 
         // Use fetch to call the backend API
-        const response = await fetch("http://localhost:3001/api/auth/signin", {
+        const response = await fetch(`${API_BASE_URL}/auth/signin`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            walletAddress: "0xc724B6892AAbC09e5f4e053717c4F37e32484a08",
+            walletAddress: credentials.walletAddress,
           }),
         });
-
-        if (!response.ok) {
-          throw new Error("Invalid wallet address");
-        }
 
         const user = await response.json();
 
@@ -115,4 +117,31 @@ export async function authenticateAdmin(): Promise<AuthResponse> {
     throw { response: "Unauthorized role" };
   }
   return { session, response: "Session found" };
+}
+
+export async function getWalletAddress(): Promise<string> {
+  const session = await getServerAuthSession();
+  if (!session) {
+    throw { response: "No session found" };
+  }
+  const SessionUser = session.user as unknown as { id: string };
+  return SessionUser?.id;
+}
+
+export async function getWalletAddressAndAccessToken(): Promise<{
+  walletAddress: string;
+  accessToken: string;
+}> {
+  const session = await getServerAuthSession();
+  if (!session) {
+    throw { response: "No session found" };
+  }
+  const SessionUser = session.user as unknown as {
+    id: string;
+    accessToken: string;
+  };
+  return {
+    walletAddress: SessionUser?.id,
+    accessToken: SessionUser?.accessToken,
+  };
 }

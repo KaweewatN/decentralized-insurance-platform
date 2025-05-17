@@ -11,9 +11,8 @@ import { Web3Service } from './web3.service';
     {
       provide: 'Web3',
       scope: Scope.REQUEST, // Make this provider request-scoped
-      useFactory: (configService: ConfigService, request: Request) => {
-        const userInfuraUrl = request.headers['infura-url'] as string; // Example: Retrieve from request headers
-        return new Web3(userInfuraUrl || configService.get('SEPOLIA_RPC'));
+      useFactory: (configService: ConfigService) => {
+        return new Web3(configService.get('SEPOLIA_RPC'));
       },
       inject: [ConfigService, REQUEST],
     },
@@ -21,11 +20,11 @@ import { Web3Service } from './web3.service';
       provide: 'Config',
       scope: Scope.REQUEST, // Make this provider request-scoped
       useFactory: (configService: ConfigService, request: Request) => {
-        const userWallet = request.headers['wallet-address'] as string; // Example: Retrieve from request headers
-        const userPrivateKey = request.headers['private-key'] as string; // Example: Retrieve from request headers
+        const userWallet = request.headers['wallet-address'] as string; // Retrieve the wallet address from the request headers
+        // const userPrivateKey = request.headers['private-key'] as string; // Retrieve the private key from the request headers
         return {
           wallet: userWallet || configService.get('WALLET_ADDRESS'),
-          privateKey: userPrivateKey || configService.get('PRIVATE_KEY'),
+          // privateKey: userPrivateKey || configService.get('PRIVATE_KEY'),
         };
       },
       inject: [ConfigService, REQUEST],

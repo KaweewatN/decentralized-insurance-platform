@@ -40,36 +40,96 @@ model User {
   events   EventLog[]
 }
 
+enum PolicyStatus {
+  All
+  Active
+  Expired
+  PendingPayment
+  Claimed
+}
+
 model Policy {
-  id            Int      @id @default(autoincrement())
-  walletAddress String
-  premium       Decimal  @db.Decimal(10, 2)
-  sumAssured    Decimal  @db.Decimal(10, 2)
-  expiry        DateTime
-  isActive      Boolean  @default(true)
-  planTypeId    Int
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                Int          @id @default(autoincrement())
+  walletAddress     String
+  premium           Decimal      @db.Decimal(10, 5)
+  sumAssured        Decimal      @db.Decimal(10, 5)
+  coverageAmount    Decimal      @db.Decimal(10, 5)
+  status            PolicyStatus
+  coverageStartDate DateTime
+  coverageEndDate   DateTime
+  transactionHash   String
+  contractAddress   String
+  documentUrl       String?
+  planTypeId        Int
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   user     User       @relation(fields: [walletAddress], references: [walletAddress])
   planType PolicyType @relation(fields: [planTypeId], references: [id])
   claims   Claim[]
+
+  flightPolicy   FlightPolicy?
+  rainfallPolicy RainfallPolicy?
+  healthPolicy   HealthPolicy?
+
+  @@index([walletAddress])
+}
+
+enum ClaimType {
+  HEALTH
+  FLIGHT
+  RAINFALL
 }
 
 model Claim {
-  id            Int       @id @default(autoincrement())
-  walletAddress String
-  policyId      Int
-  amount        Decimal   @db.Decimal(10, 2)
-  documentHash  String    @unique
-  isPending     Boolean   @default(true)
-  status        String    @default("Pending")
-  approvedDate  DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              Int       @id @default(autoincrement())
+  walletAddress   String
+  policyId        Int
+  amount          Decimal   @db.Decimal(10, 2)
+  transactionHash String    @unique
+  documentUrl     String?
+  status          String    @default("Pending")
+  contractAddress String?
+  approvedDate    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  type            ClaimType @default(HEALTH)
 
   user   User   @relation(fields: [walletAddress], references: [walletAddress])
   policy Policy @relation(fields: [policyId], references: [id])
+}
+
+model FlightPolicy {
+  id             Int      @id @default(autoincrement())
+  policyId       Int      @unique
+  airline        String
+  flightNumber   String
+  depAirport     String
+  arrAirport     String
+  depTime        String
+  flightDate     DateTime
+  depCountry     String
+  arrCountry     String
+  coverageAmount Decimal  @db.Decimal(10, 2)
+  numPersons     Int
+  createdAt      DateTime @default(now())
+  policy         Policy   @relation(fields: [policyId], references: [id])
+}
+
+model HealthPolicy {
+  id        Int    @id @default(autoincrement())
+  policyId  Int    @unique
+  hospital  String
+  diagnosis String
+  policy    Policy @relation(fields: [policyId], references: [id])
+}
+
+model RainfallPolicy {
+  id       Int     @id @default(autoincrement())
+  policyId Int     @unique
+  location String
+  rainfall Decimal @db.Decimal(5, 2)
+  policy   Policy  @relation(fields: [policyId], references: [id])
 }
 
 model EventLog {
@@ -83,15 +143,6 @@ model EventLog {
   updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [walletAddress], references: [walletAddress])
-}
-
-model OracleRate {
-  id         Int      @id @default(autoincrement())
-  timestamp  DateTime @unique
-  rate       Decimal  @db.Decimal(18, 8)
-  updated_by String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 }
 
 model PolicyType {

@@ -1,4 +1,4 @@
-import LearnMore from "@pages/learn-more/LearnMore";
+import LearnMore from "@/views/learn-more/LearnMore";
 export default function LearnMorePage() {
   return <LearnMore />;
 }
