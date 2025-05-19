@@ -411,7 +411,7 @@ export function PolicyPurchaseReview({
         <CardFooter className="flex justify-between p-6 border-t">
           <Button
             variant="outline"
-            onClick={() => localStorage.removeItem("flightPolicyDraft")}
+            onClick={() => sessionStorage.removeItem("flightPolicyDraft")}
             asChild
           >
             <Link href="/dashboard">Cancel</Link>

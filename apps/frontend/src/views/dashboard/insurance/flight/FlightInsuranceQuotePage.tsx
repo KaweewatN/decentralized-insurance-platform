@@ -51,10 +51,10 @@ export default function FlightInsuranceQuotePage() {
   const [amount, setAmount] = useState<string>("0.0001"); // default premium
   const [to, setTo] = useState<string>(""); // will be set from draft
 
-  // Auto connect from localStorage user_address
+  // Auto connect from sessionStorage user_address
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("flightPolicyDraft");
+      const stored = sessionStorage.getItem("flightPolicyDraft");
       if (stored) {
         const data = JSON.parse(stored);
         setDraft(data);
