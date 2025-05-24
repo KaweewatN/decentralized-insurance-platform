@@ -48,7 +48,10 @@ export default function AccountPage({
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        const res = await apiService.get<any>("/wallet/balance", accessToken);
+        const res = await apiService.get<any>(
+          `/wallet/balance?walletAddress=${walletAddress}`,
+          accessToken
+        );
         setEthBalance(res?.data?.balance?.ether?.value.toString());
       } catch (err) {
         console.error("Fetch error:", err);
