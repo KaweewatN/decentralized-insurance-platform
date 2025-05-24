@@ -110,6 +110,18 @@ export class FlightInsuranceController {
     );
   }
 
+  // Endpoint to get the user's policy history
+  @Get('user-policies')
+  async getUserPolicies(@Query('userAddress') userAddress: string) {
+    if (!userAddress) {
+      return { error: 'Missing userAddress in query' };
+    }
+    const history =
+      await this.flightInsuranceService.getUserPolicyHistory(userAddress);
+    return { policies: history };
+  }
+
+  // Endpoint to get the ABI and contract address
   @Get('abi')
   getAbi() {
     const abiPath = path.join(

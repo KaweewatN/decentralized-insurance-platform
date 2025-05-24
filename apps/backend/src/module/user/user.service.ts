@@ -4,6 +4,7 @@ import { PrismaService } from 'src/service/prisma/prisma.service';
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
+
   async getPoliciesByWallet(walletAddress: string, policyId?: string) {
     return this.prisma.policy.findMany({
       where: {
