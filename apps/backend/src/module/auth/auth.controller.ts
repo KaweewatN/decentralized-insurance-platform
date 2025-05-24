@@ -6,6 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { SignUpType } from './types/auth.types';
 
 @Controller('auth')
 export class AuthController {
@@ -21,5 +22,13 @@ export class AuthController {
     }
 
     return this.authService.signin(walletAddress);
+  }
+
+  @Post('signup')
+  async signup(@Body() userData: SignUpType) {
+    if (!userData) {
+      throw new HttpException('User data are required', HttpStatus.BAD_REQUEST);
+    }
+    return this.authService.signup(userData);
   }
 }

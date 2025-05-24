@@ -22,35 +22,44 @@ import {
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { toastSuccess, toastError } from "./appToast";
+// signin and signup
 import { signIn, signOut, useSession } from "next-auth/react";
+import apiService from "@/utils/apiService";
+// form validation
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+// utils
+import connectMetaMaskWallet from "@/utils/coonectMetaMaskWallet";
+
+const signUpSchema = z.object({
+  username: z.string().nonempty("Username is required"),
+  fullName: z.string().nonempty("Full name is required"),
+  age: z.number().min(1, "Age is required"),
+  gender: z.string().nonempty("Gender is required"),
+  occupation: z.string().nonempty("Occupation is required"),
+  contactInfo: z.string().nonempty("Contact info is required"),
+});
 
 export default function SignInButton() {
-  const [walletAddress, setWalletAddress] = useState("");
   const [response, setResponse] = useState("");
   const [isPending, startTransition] = useTransition();
   const [tab, setTab] = useState("signin");
   const { data: session } = useSession() || {};
   const router = useRouter();
 
-  const connectWallet = async () => {
-    if (!window.ethereum) {
-      alert("MetaMask is not installed!");
-      return null;
-    }
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
-      const address = ethers.getAddress(accounts[0]);
-      setWalletAddress(address);
-      return address;
-    } catch (err) {
-      toastError("Failed to connect wallet");
-      return null;
-    }
-  };
+  const {
+    register,
+    handleSubmit,
+    reset: resetForm,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(signUpSchema),
+  });
 
+  // Sign in with MetaMask
   const handleSignIn = async () => {
-    const address = await connectWallet();
+    const address = await connectMetaMaskWallet();
     if (!address) return;
 
     startTransition(async () => {
@@ -70,6 +79,36 @@ export default function SignInButton() {
         }
       } catch (err) {
         setResponse("Failed to sign in");
+        toastError("Failed to sign in");
+      }
+    });
+  };
+
+  // Sign up with MetaMask and create a new user
+  const handleSignUp = async (data: any) => {
+    const address = await connectMetaMaskWallet();
+    console.log("address", address);
+    console.log("data", data);
+    if (!address) return;
+
+    startTransition(async () => {
+      try {
+        const signUpData = {
+          walletAddress: address,
+          ...data,
+          imageUrl: "",
+        };
+
+        const res = await apiService.post<any>(`/auth/signup`, signUpData);
+        if (res) {
+          setResponse("Sign up successful, Please sign in");
+          toastSuccess("Sign up successful, Please sign in");
+          resetForm();
+        }
+      } catch (err) {
+        setResponse("Failed to sign up");
+        toastError("Failed to sign up");
+        resetForm();
       }
     });
   };
@@ -90,7 +129,7 @@ export default function SignInButton() {
         </HoverCardTrigger>
         <HoverCardContent className="max-w-48 mr-5">
           <div className="flex flex-col gap-2">
-            <span className="font-semibold ">{session.user?.username}</span>
+            <span className="font-semibold">{session.user?.username}</span>
             <p className="text-sm text-slate-500">
               Name:{" "}
               <span className="font-medium text-black">
@@ -163,21 +202,127 @@ export default function SignInButton() {
             </Button>
           </TabsContent>
           <TabsContent value="signup">
-            {/* Implement sign up logic if needed */}
-            <Button disabled className="w-full">
-              <Image
-                src="/assets/icons/metamask-icon.png"
-                alt="MetaMask"
-                width={24}
-                height={24}
-                style={{ marginRight: 8 }}
-              />
-              Sign Up with MetaMask (Not implemented)
-            </Button>
+            <form onSubmit={handleSubmit(handleSignUp)} className="space-y-4">
+              <div className="w-full mb-5 text-sm text-gray-500">
+                ✨ Create your account by signing up with your MetaMask wallet.
+              </div>
+
+              {/* Form Fields */}
+              <div className="space-y-2">
+                <div>
+                  <label htmlFor="username">Username</label>
+                  <input
+                    id="username"
+                    type="text"
+                    {...register("username")}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  {errors.username && (
+                    <p className="text-red-500 text-sm">
+                      {String(errors.username.message)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="fullName">Full Name</label>
+                  <input
+                    id="fullName"
+                    type="text"
+                    {...register("fullName")}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  {errors.fullName && (
+                    <p className="text-red-500 text-sm">
+                      {String(errors.fullName.message)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="age">Age</label>
+                  <input
+                    id="age"
+                    type="number"
+                    {...register("age", { valueAsNumber: true })}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  {errors.age && (
+                    <p className="text-red-500 text-sm">
+                      {String(errors.age.message)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="gender">Gender</label>
+                  <select
+                    id="gender"
+                    {...register("gender")}
+                    className="w-full px-3 py-2 border rounded"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {errors.gender && (
+                    <p className="text-red-500 text-sm">
+                      {String(errors.gender.message)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="occupation">Occupation</label>
+                  <input
+                    id="occupation"
+                    type="text"
+                    {...register("occupation")}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  {errors.occupation && (
+                    <p className="text-red-500 text-sm">
+                      {String(errors.occupation.message)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="contactInfo">Contact Info</label>
+                  <input
+                    id="contactInfo"
+                    type="text"
+                    {...register("contactInfo")}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  {errors.contactInfo && (
+                    <p className="text-red-500 text-sm">
+                      {String(errors.contactInfo.message)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button type="submit" disabled={isPending} className="w-full">
+                <Image
+                  src="/assets/icons/metamask-icon.png"
+                  alt="MetaMask"
+                  width={24}
+                  height={24}
+                  style={{ marginRight: 8 }}
+                />
+                {isPending ? "Signing Up..." : "Sign Up with MetaMask"}
+              </Button>
+            </form>
           </TabsContent>
         </Tabs>
         {response && (
-          <div style={{ marginTop: 16, color: "red" }}>{response}</div>
+          <div
+            className={
+              response == "Sign up successful, Please sign in"
+                ? "text-green-600"
+                : "text-red-500"
+            }
+          >
+            {response}
+          </div>
         )}
         <DialogClose asChild></DialogClose>
       </DialogContent>
