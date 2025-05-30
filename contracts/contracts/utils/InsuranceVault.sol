@@ -2,19 +2,45 @@
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @title InsuranceVault
+/// @title InsuranceVault - FIXED VERSION
 /// @notice Holds and manages ETH funds for insurance premiums, claims, and refunds
-/// @dev Acts as the central treasury for all insurance plans.
-/// Only the contract owner can approve payouts or issue refunds.
-/// Incoming ETH (premiums) are logged via events.
-/// Does not implement business logic—only handles secure fund transfers.
+/// @dev Added approval system for insurance contracts to call approveClaim
 contract InsuranceVault is Ownable {
+    // ✅ NEW: Track approved insurance contracts
+    mapping(address => bool) public approvedContracts;
+    
     event PremiumPaid(address indexed user, uint256 amount);
     event ClaimPaid(address indexed to, uint256 amount);
     event RefundIssued(address indexed user, uint256 amount);
     event FundWithdrawn(address indexed to, uint256 amount);
+    event ContractApproved(address indexed contractAddress);
+    event ContractRevoked(address indexed contractAddress);
     
     constructor(address initialOwner) Ownable(initialOwner) {}
+    
+    // ✅ NEW: Modifier to allow owner OR approved contracts
+    modifier onlyOwnerOrApprovedContract() {
+        require(msg.sender == owner() || approvedContracts[msg.sender], "Not authorized");
+        _;
+    }
+    
+    // ✅ NEW: Approve insurance contract to make claims
+    function approveContract(address contractAddress) external onlyOwner {
+        require(contractAddress != address(0), "Invalid contract address");
+        approvedContracts[contractAddress] = true;
+        emit ContractApproved(contractAddress);
+    }
+    
+    // ✅ NEW: Revoke insurance contract access
+    function revokeContract(address contractAddress) external onlyOwner {
+        approvedContracts[contractAddress] = false;
+        emit ContractRevoked(contractAddress);
+    }
+    
+    // ✅ NEW: Check if contract is approved
+    function isApprovedContract(address contractAddress) external view returns (bool) {
+        return approvedContracts[contractAddress];
+    }
     
     /// @notice Accept premium payments (ETH)
     receive() external payable {
@@ -22,10 +48,8 @@ contract InsuranceVault is Ownable {
         emit PremiumPaid(msg.sender, msg.value);
     }
     
-    /// @notice Approve and send a claim payout to a policyholder
-    /// @param to The address of the policyholder
-    /// @param amount The amount to be paid out
-    function approveClaim(address payable to, uint256 amount) external onlyOwner {
+    /// @notice ✅ UPDATED: Allow approved contracts to call this
+    function approveClaim(address payable to, uint256 amount) external onlyOwnerOrApprovedContract {
         require(address(this).balance >= amount, "Insufficient balance in vault");
         require(amount > 0, "Claim amount must be greater than zero");
         (bool sent, ) = to.call{value: amount}("");
@@ -33,10 +57,8 @@ contract InsuranceVault is Ownable {
         emit ClaimPaid(to, amount);
     }
     
-    /// @notice Issue a refund to a policyholder
-    /// @param to The address of the policyholder
-    /// @param amount The amount to be refunded
-    function sendRefund(address payable to, uint256 amount) external onlyOwner {
+    /// @notice ✅ UPDATED: Allow approved contracts to call this
+    function sendRefund(address payable to, uint256 amount) external onlyOwnerOrApprovedContract {
         require(address(this).balance >= amount, "Insufficient balance in vault");
         require(amount > 0, "Refund amount must be greater than zero");
         (bool sent, ) = to.call{value: amount}("");
@@ -44,9 +66,7 @@ contract InsuranceVault is Ownable {
         emit RefundIssued(to, amount);
     }
     
-    /// @notice Withdraw funds from the vault (Admin Only)
-    /// @param to The address to withdraw funds to
-    /// @param amount The amount to withdraw
+    /// @notice Withdraw funds from the vault (Owner Only)
     function withdrawFunds(address payable to, uint256 amount) external onlyOwner {
         require(address(this).balance >= amount, "Insufficient balance in vault");
         require(amount > 0, "Withdraw amount must be greater than zero");
@@ -56,8 +76,8 @@ contract InsuranceVault is Ownable {
     }
     
     /// @notice Get the current balance of the vault
-    /// @return The current balance of the vault
     function getVaultBalance() external view returns (uint256) {
         return address(this).balance;
     }
+
 }

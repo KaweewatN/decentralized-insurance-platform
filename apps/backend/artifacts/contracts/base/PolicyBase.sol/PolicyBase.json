@@ -128,12 +128,6 @@
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "documentHash",
-          "type": "string"
         }
       ],
       "name": "ClaimFiled",
@@ -496,11 +490,6 @@
           "type": "uint256"
         },
         {
-          "internalType": "string",
-          "name": "documentHash",
-          "type": "string"
-        },
-        {
           "internalType": "bytes",
           "name": "signature",
           "type": "bytes"
@@ -532,11 +521,6 @@
               "internalType": "uint256",
               "name": "amount",
               "type": "uint256"
-            },
-            {
-              "internalType": "string",
-              "name": "documentHash",
-              "type": "string"
             },
             {
               "internalType": "bool",

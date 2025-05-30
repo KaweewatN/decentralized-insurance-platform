@@ -1,623 +1,863 @@
 import { expect } from "chai";
-import { ethers } from "hardhat"; // Using ethers from hardhat
-import type { Signer } from "ethers"; // Optional: for better type safety for signers
-import type { TransactionReceipt } from "ethers"; // For receipt type
+import { ethers } from "hardhat";
+import { PolicyBaseMock, InsuranceVault } from "../typechain-types";
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
-describe("PolicyBaseMock", function () {
-  let policyBaseMock: any;
-  let owner: Signer,
-    user1: Signer,
-    user2: Signer,
-    admin: Signer,
-    trustedSigner: Signer; // Used Signer type
-  let premium: bigint, sumAssured: bigint; // Using bigint for these values
-  const duration = 365 * 24 * 60 * 60; // 1 year in seconds
-  let policyId: any; // Kept as any as per original, could be bytes32 or string
+describe("PolicyBase & PolicyBaseMock", function () {
+  let vault: InsuranceVault;
+  let policyContract: PolicyBaseMock;
+  let owner: SignerWithAddress;
+  let admin: SignerWithAddress;
+  let user1: SignerWithAddress;
+  let user2: SignerWithAddress;
+  let unauthorized: SignerWithAddress;
 
-  before(async function () {
-    console.log("Setting up test environment...");
-    // Setup accounts
-    const signers = await ethers.getSigners();
-    owner = signers[0];
-    user1 = signers[1];
-    user2 = signers[2];
-    admin = signers[3];
-    trustedSigner = signers[4];
-    console.log("Accounts loaded");
+  const VAULT_INITIAL_BALANCE = ethers.parseEther("100.0");
+  const PREMIUM_AMOUNT = ethers.parseEther("1.0");
+  const SUM_ASSURED = ethers.parseEther("10.0");
+  const DURATION = 365 * 24 * 60 * 60; // 1 year in seconds
+  const CLAIM_AMOUNT = ethers.parseEther("5.0");
+  const REFUND_AMOUNT = ethers.parseEther("0.8");
 
-    // Convert to BigInt values
-    premium = ethers.getBigInt("100000000000000000"); // 0.1 ETH
-    sumAssured = ethers.getBigInt("10000000000000000000"); // 10 ETH
-    console.log(
-      `Premium: ${ethers.formatEther(
-        premium
-      )} ETH, Sum Assured: ${ethers.formatEther(sumAssured)} ETH`
-    );
+  let samplePolicyId: string;
 
-    // Deploy contract
-    console.log("Deploying PolicyBaseMock contract...");
-    const PolicyBaseMockFactory = await ethers.getContractFactory(
-      "PolicyBaseMock"
-    );
-    policyBaseMock = await PolicyBaseMockFactory.deploy(
-      await trustedSigner.getAddress()
-    ); // Pass address string
-    console.log("Contract deployed to:", await policyBaseMock.getAddress());
+  beforeEach(async function () {
+    [owner, admin, user1, user2, unauthorized] = await ethers.getSigners();
+
+    // Deploy InsuranceVault
+    const VaultFactory = await ethers.getContractFactory("InsuranceVault");
+    vault = await VaultFactory.deploy(owner.address);
+
+    // Deploy PolicyBaseMock
+    const PolicyFactory = await ethers.getContractFactory("PolicyBaseMock");
+    policyContract = await PolicyFactory.deploy(vault.target);
+
+    // Fund the vault
+    await owner.sendTransaction({
+      to: vault.target,
+      value: VAULT_INITIAL_BALANCE,
+    });
+
+    // Approve policy contract in vault
+    await vault.connect(owner).approveContract(policyContract.target);
 
     // Grant admin role
-    console.log("Granting ADMIN_ROLE to admin account...");
-    const ADMIN_ROLE = ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
-    await policyBaseMock.grantRole(ADMIN_ROLE, await admin.getAddress()); // Pass address string
-    console.log("Admin role granted");
-  });
+    const adminRole = await policyContract.ADMIN_ROLE();
+    await policyContract.connect(owner).grantRole(adminRole, admin.address);
 
-  describe("Policy Operations", function () {
-    it("Should purchase a policy without signature", async function () {
-      console.log("\n----- Testing purchase policy without signature -----");
-      const user1Address = await user1.getAddress();
-      console.log("User1 address:", user1Address);
-
-      console.log("Purchasing policy...");
-      const tx = await policyBaseMock
-        .connect(user1)
-        .purchasePolicyWithoutSignature(
-          user1Address,
-          premium,
-          sumAssured,
-          duration,
-          { value: premium }
-        );
-      console.log("Transaction submitted:", tx.hash);
-
-      const receipt = (await tx.wait()) as TransactionReceipt; // Cast to TransactionReceipt
-      console.log("Transaction confirmed in block:", receipt.blockNumber);
-
-      // Get the policy ID from event
-      console.log("Parsing logs for PolicyPurchased event...");
-      if (receipt.logs && receipt.logs.length > 0) {
-        // Check logs for events
-        const policyPurchasedInterface = new ethers.Interface(
-          policyBaseMock.interface.fragments
-        );
-        for (const log of receipt.logs) {
-          try {
-            const parsedLog = policyPurchasedInterface.parseLog(log as any); // Explicitly cast log if needed
-            if (parsedLog && parsedLog.name === "PolicyPurchased") {
-              policyId = parsedLog.args.policyId;
-              console.log("Found PolicyPurchased event with ID:", policyId);
-              break;
-            }
-          } catch (e) {
-            // Not the event we are looking for or unparseable by this interface
-          }
-        }
-      }
-
-      // Fallback: If no event found or parsed, use a deterministic ID based on receipt
-      if (!policyId && receipt.blockNumber) {
-        console.log("Using fallback method with block number");
-        // Check if receipt.blockNumber is available
-        const calculatedPolicyId = ethers.keccak256(
-          ethers.AbiCoder.defaultAbiCoder().encode(
-            ["address", "uint256"],
-            [user1Address, receipt.blockNumber] // Use receipt.blockNumber
-          )
-        );
-        // Verify if this calculated ID exists (optional, depends on contract logic)
-        const policyCheck = await policyBaseMock.getPolicy(calculatedPolicyId);
-        if (policyCheck && policyCheck.owner === user1Address) {
-          policyId = calculatedPolicyId;
-          console.log("Verified calculated policy ID:", policyId);
-        }
-      }
-
-      // Final fallback: Use another way to get the policy ID
-      if (!policyId) {
-        console.log("Using second fallback: getPoliciesByOwner");
-        const policies = await policyBaseMock.getPoliciesByOwner(user1Address);
-        if (policies && policies.length > 0) {
-          policyId = policies[policies.length - 1]; // Assuming the last one is the newest
-          console.log("Found policy ID from owner's policies:", policyId);
-        } else {
-          // Generate a random ID for testing if all else fails (less ideal for reproducible tests)
-          console.warn("Generated random ID for test continuation");
-          policyId = ethers.hexlify(ethers.randomBytes(32));
-        }
-      }
-
-      console.log("Final Policy ID:", policyId);
-      expect(policyId).to.not.be.undefined; // Ensure policyId was set
-
-      const policy = await policyBaseMock.getPolicy(policyId);
-      console.log("Policy details:", {
-        owner: policy.owner,
-        premium: ethers.formatEther(policy.premium),
-      });
-
-      expect(policy.owner).to.equal(user1Address);
-      expect(policy.premium.toString()).to.equal(premium.toString());
-      console.log("Policy purchase verified successfully");
-    });
-
-    it("Should file a claim without signature", async function () {
-      console.log("\n----- Testing file claim without signature -----");
-      if (!policyId) {
-        console.log("Skipping claim test - no policy ID from previous test");
-        this.skip(); // Skip this test if policyId is not set
-        return;
-      }
-
-      console.log("Using policy ID:", policyId);
-      const documentHash = "test_document_hash";
-      const claimAmount = ethers.getBigInt("1000000000000000000"); // 1 ETH
-      console.log(
-        `Filing claim with amount: ${ethers.formatEther(claimAmount)} ETH`
+    // Create a sample policy for testing
+    const tx = await policyContract
+      .connect(user1)
+      .purchasePolicyWithoutSignature(
+        user1.address,
+        PREMIUM_AMOUNT,
+        SUM_ASSURED,
+        DURATION,
+        { value: PREMIUM_AMOUNT }
       );
-
-      console.log("Submitting claim transaction...");
-      await policyBaseMock
-        .connect(user1)
-        .fileClaimWithoutSignature(policyId, claimAmount, documentHash);
-      console.log("Claim submitted successfully");
-
-      const claim = await policyBaseMock.getClaim(policyId);
-      console.log("Claim details:", {
-        amount: ethers.formatEther(claim.amount),
-        isPending: claim.isPending,
-      });
-
-      expect(claim.amount.toString()).to.equal(claimAmount.toString());
-      expect(claim.isPending).to.be.true;
-      console.log("Claim verified successfully");
-    });
-
-    it("Should set claim state directly", async function () {
-      console.log("\n----- Testing set claim state directly -----");
-      if (!policyId) {
-        console.log("Skipping state test - no policy ID from previous test");
-        this.skip();
-        return;
-      }
-
-      console.log("Using policy ID:", policyId);
-      console.log(
-        "Setting claim state: isPending=false, isClaimed=true, isActive=false"
-      );
-
-      await policyBaseMock
-        .connect(admin)
-        .setClaimState(policyId, false, true, false);
-      console.log("Claim state set successfully");
-
-      const claim = await policyBaseMock.getClaim(policyId);
-      const policy = await policyBaseMock.getPolicy(policyId);
-      console.log("Updated claim state:", {
-        isPending: claim.isPending,
-      });
-      console.log("Updated policy state:", {
-        isClaimed: policy.isClaimed,
-        isActive: policy.isActive,
-      });
-
-      expect(claim.isPending).to.be.false;
-      expect(policy.isClaimed).to.be.true;
-      expect(policy.isActive).to.be.false;
-      console.log("Claim state update verified successfully");
-    });
-
-    it("Should create a new policy and set expiry time", async function () {
-      console.log("\n----- Testing policy with custom expiry time -----");
-      const user2Address = await user2.getAddress();
-      console.log("User2 address:", user2Address);
-
-      console.log("Purchasing policy...");
-      const tx = await policyBaseMock
-        .connect(user2)
-        .purchasePolicyWithoutSignature(
-          user2Address,
-          premium,
-          sumAssured,
-          duration,
-          { value: premium }
-        );
-      console.log("Transaction submitted:", tx.hash);
-
-      const receipt = (await tx.wait()) as TransactionReceipt;
-      console.log("Transaction confirmed in block:", receipt.blockNumber);
-
-      let newPolicyId: any;
-      console.log("Parsing logs for PolicyPurchased event...");
-
-      if (receipt.logs && receipt.logs.length > 0) {
-        const policyPurchasedInterface = new ethers.Interface(
-          policyBaseMock.interface.fragments
-        );
-        for (const log of receipt.logs) {
-          try {
-            const parsedLog = policyPurchasedInterface.parseLog(log as any);
-            if (parsedLog && parsedLog.name === "PolicyPurchased") {
-              newPolicyId = parsedLog.args.policyId;
-              console.log("Found PolicyPurchased event with ID:", newPolicyId);
-              break;
-            }
-          } catch (e) {}
-        }
-      }
-
-      if (!newPolicyId && receipt.blockNumber) {
-        console.log("Using fallback with block number");
-        // Check if receipt.blockNumber is available
-        newPolicyId = ethers.keccak256(
-          ethers.AbiCoder.defaultAbiCoder().encode(
-            ["address", "uint256"],
-            [user2Address, receipt.blockNumber] // Use receipt.blockNumber for deterministic fallback
-          )
-        );
-        console.log("Calculated policy ID:", newPolicyId);
-      } else if (!newPolicyId) {
-        console.warn("Generated random ID for test continuation");
-        newPolicyId = ethers.hexlify(ethers.randomBytes(32));
-      }
-
-      expect(newPolicyId).to.not.be.undefined;
-      console.log("Policy ID confirmed:", newPolicyId);
-
-      const thirtyDaysFromNow =
-        Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
-      console.log(
-        "Setting expiry timestamp to:",
-        new Date(thirtyDaysFromNow * 1000).toISOString()
-      );
-
-      await policyBaseMock
-        .connect(admin)
-        .setExpiryTimestamp(newPolicyId, thirtyDaysFromNow);
-      console.log("Expiry timestamp set successfully");
-
-      const policy = await policyBaseMock.getPolicy(newPolicyId);
-      console.log(
-        "Policy expiry:",
-        new Date(Number(policy.expiry) * 1000).toISOString()
-      );
-
-      expect(policy.expiry.toString()).to.equal(thirtyDaysFromNow.toString());
-      console.log("Expiry timestamp verified successfully");
-    });
-
-    it("Should create a policy, set it to near expiry, and renew it", async function () {
-      console.log("\n----- Testing policy renewal -----");
-      const user1Address = await user1.getAddress();
-      console.log("User1 address:", user1Address);
-
-      console.log("Purchasing policy...");
-      const tx = await policyBaseMock
-        .connect(user1)
-        .purchasePolicyWithoutSignature(
-          user1Address,
-          premium,
-          sumAssured,
-          duration,
-          { value: premium }
-        );
-      console.log("Transaction submitted:", tx.hash);
-
-      const receipt = (await tx.wait()) as TransactionReceipt;
-      console.log("Transaction confirmed in block:", receipt.blockNumber);
-
-      let renewPolicyId: any;
-      console.log("Parsing logs for PolicyPurchased event...");
-
-      if (receipt.logs && receipt.logs.length > 0) {
-        const policyPurchasedInterface = new ethers.Interface(
-          policyBaseMock.interface.fragments
-        );
-        for (const log of receipt.logs) {
-          try {
-            const parsedLog = policyPurchasedInterface.parseLog(log as any);
-            if (parsedLog && parsedLog.name === "PolicyPurchased") {
-              renewPolicyId = parsedLog.args.policyId;
-              console.log(
-                "Found PolicyPurchased event with ID:",
-                renewPolicyId
-              );
-              break;
-            }
-          } catch (e) {}
-        }
-      }
-
-      if (!renewPolicyId && receipt.blockNumber) {
-        console.log("Using fallback with block number");
-        renewPolicyId = ethers.keccak256(
-          ethers.AbiCoder.defaultAbiCoder().encode(
-            ["address", "uint256"],
-            [user1Address, receipt.blockNumber]
-          )
-        );
-        console.log("Calculated policy ID:", renewPolicyId);
-      } else if (!renewPolicyId) {
-        console.warn("Generated random ID for test continuation");
-        renewPolicyId = ethers.hexlify(ethers.randomBytes(32));
-      }
-
-      expect(renewPolicyId).to.not.be.undefined;
-      console.log("Policy ID confirmed:", renewPolicyId);
-
-      console.log("Setting policy to near expiry (5 time units remaining)...");
-      await policyBaseMock.connect(admin).setTimeToNearExpiry(renewPolicyId, 5);
-      console.log("Policy set to near expiry");
-
-      const newPremium = ethers.getBigInt("120000000000000000"); // 0.12 ETH
-      const renewDuration = 180 * 24 * 60 * 60; // 180 days
-      console.log(
-        `Renewing policy with premium: ${ethers.formatEther(
-          newPremium
-        )} ETH for ${renewDuration / (24 * 60 * 60)} days`
-      );
-
-      await policyBaseMock
-        .connect(user1)
-        .renewPolicyWithoutSignature(renewPolicyId, newPremium, renewDuration, {
-          value: newPremium,
-        });
-      console.log("Policy renewed successfully");
-
-      const policy = await policyBaseMock.getPolicy(renewPolicyId);
-      console.log("Policy details after renewal:", {
-        premium: ethers.formatEther(policy.premium),
-        expiry: new Date(Number(policy.expiry) * 1000).toISOString(),
-      });
-
-      expect(policy.premium.toString()).to.equal(newPremium.toString());
-      console.log("Renewal verified successfully");
-    });
-
-    it("Should create a mock claim and approve it", async function () {
-      console.log("\n----- Testing mock claim and approval -----");
-      const user2Address = await user2.getAddress();
-      console.log("User2 address:", user2Address);
-
-      console.log("Purchasing policy...");
-      const tx = await policyBaseMock
-        .connect(user2)
-        .purchasePolicyWithoutSignature(
-          user2Address,
-          premium,
-          sumAssured,
-          duration,
-          { value: premium }
-        );
-      console.log("Transaction submitted:", tx.hash);
-
-      const receipt = (await tx.wait()) as TransactionReceipt;
-      console.log("Transaction confirmed in block:", receipt.blockNumber);
-
-      let claimPolicyId: any;
-      console.log("Parsing logs for PolicyPurchased event...");
-
-      if (receipt.logs && receipt.logs.length > 0) {
-        const policyPurchasedInterface = new ethers.Interface(
-          policyBaseMock.interface.fragments
-        );
-        for (const log of receipt.logs) {
-          try {
-            const parsedLog = policyPurchasedInterface.parseLog(log as any);
-            if (parsedLog && parsedLog.name === "PolicyPurchased") {
-              claimPolicyId = parsedLog.args.policyId;
-              console.log(
-                "Found PolicyPurchased event with ID:",
-                claimPolicyId
-              );
-              break;
-            }
-          } catch (e) {}
-        }
-      }
-
-      if (!claimPolicyId && receipt.blockNumber) {
-        console.log("Using fallback with block number");
-        claimPolicyId = ethers.keccak256(
-          ethers.AbiCoder.defaultAbiCoder().encode(
-            ["address", "uint256"],
-            [user2Address, receipt.blockNumber]
-          )
-        );
-        console.log("Calculated policy ID:", claimPolicyId);
-      } else if (!claimPolicyId) {
-        console.warn("Generated random ID for test continuation");
-        claimPolicyId = ethers.hexlify(ethers.randomBytes(32));
-      }
-
-      expect(claimPolicyId).to.not.be.undefined;
-      console.log("Policy ID confirmed:", claimPolicyId);
-
-      const claimAmount = ethers.getBigInt("5000000000000000000"); // 5 ETH
-      console.log(
-        `Creating mock claim with amount: ${ethers.formatEther(
-          claimAmount
-        )} ETH`
-      );
-
-      await policyBaseMock
-        .connect(admin)
-        .createMockClaim(
-          claimPolicyId,
-          claimAmount,
-          "mock_document_hash",
-          true
-        );
-      console.log("Mock claim created successfully");
-
-      console.log("Approving claim...");
-      await policyBaseMock
-        .connect(admin)
-        .approveClaimWithoutVerification(claimPolicyId);
-      console.log("Claim approved successfully");
-
-      const policy = await policyBaseMock.getPolicy(claimPolicyId);
-      console.log("Policy state after claim approval:", {
-        isClaimed: policy.isClaimed,
-        isActive: policy.isActive,
-      });
-
-      expect(policy.isClaimed).to.be.true;
-      expect(policy.isActive).to.be.false;
-      console.log("Claim approval verified successfully");
-    });
-
-    it("Should force expire a policy", async function () {
-      console.log("\n----- Testing force expire policy -----");
-      const user1Address = await user1.getAddress();
-      console.log("User1 address:", user1Address);
-
-      console.log("Purchasing policy...");
-      const tx = await policyBaseMock
-        .connect(user1)
-        .purchasePolicyWithoutSignature(
-          user1Address,
-          premium,
-          sumAssured,
-          duration,
-          { value: premium }
-        );
-      console.log("Transaction submitted:", tx.hash);
-
-      const receipt = (await tx.wait()) as TransactionReceipt;
-      console.log("Transaction confirmed in block:", receipt.blockNumber);
-
-      let expirePolicyId: any;
-      console.log("Parsing logs for PolicyPurchased event...");
-
-      if (receipt.logs && receipt.logs.length > 0) {
-        const policyPurchasedInterface = new ethers.Interface(
-          policyBaseMock.interface.fragments
-        );
-        for (const log of receipt.logs) {
-          try {
-            const parsedLog = policyPurchasedInterface.parseLog(log as any);
-            if (parsedLog && parsedLog.name === "PolicyPurchased") {
-              expirePolicyId = parsedLog.args.policyId;
-              console.log(
-                "Found PolicyPurchased event with ID:",
-                expirePolicyId
-              );
-              break;
-            }
-          } catch (e) {}
-        }
-      }
-
-      if (!expirePolicyId && receipt.blockNumber) {
-        console.log("Using fallback with block number");
-        expirePolicyId = ethers.keccak256(
-          ethers.AbiCoder.defaultAbiCoder().encode(
-            ["address", "uint256"],
-            [user1Address, receipt.blockNumber]
-          )
-        );
-        console.log("Calculated policy ID:", expirePolicyId);
-      } else if (!expirePolicyId) {
-        console.warn("Generated random ID for test continuation");
-        expirePolicyId = ethers.hexlify(ethers.randomBytes(32));
-      }
-
-      expect(expirePolicyId).to.not.be.undefined;
-      console.log("Policy ID confirmed:", expirePolicyId);
-
-      console.log("Getting policy state before expiry...");
-      const policyBefore = await policyBaseMock.getPolicy(expirePolicyId);
-      console.log("Policy active state before:", policyBefore.isActive);
-
-      console.log("Forcing policy to expire...");
-      await policyBaseMock.connect(admin).forceExpirePolicy(expirePolicyId);
-      console.log("Force expire completed");
-
-      const policy = await policyBaseMock.getPolicy(expirePolicyId);
-      console.log("Policy active state after:", policy.isActive);
-
-      expect(policy.isActive).to.be.false;
-      console.log("Force expire verified successfully");
-    });
-  });
-
-  describe("Edge Cases", function () {
-    it("Should handle claims with zero amount", async function () {
-      console.log("\n----- Testing claims with zero amount -----");
-      const user2Address = await user2.getAddress();
-      console.log("User2 address:", user2Address);
-
-      console.log("Purchasing policy...");
-      const tx = await policyBaseMock
-        .connect(user2)
-        .purchasePolicyWithoutSignature(
-          user2Address,
-          premium,
-          sumAssured,
-          duration,
-          { value: premium }
-        );
-      console.log("Transaction submitted:", tx.hash);
-
-      const receipt = (await tx.wait()) as TransactionReceipt;
-      console.log("Transaction confirmed in block:", receipt.blockNumber);
-
-      let zeroPolicyId: any;
-      console.log("Parsing logs for PolicyPurchased event...");
-
-      if (receipt.logs && receipt.logs.length > 0) {
-        const policyPurchasedInterface = new ethers.Interface(
-          policyBaseMock.interface.fragments
-        );
-        for (const log of receipt.logs) {
-          try {
-            const parsedLog = policyPurchasedInterface.parseLog(log as any);
-            if (parsedLog && parsedLog.name === "PolicyPurchased") {
-              zeroPolicyId = parsedLog.args.policyId;
-              console.log("Found PolicyPurchased event with ID:", zeroPolicyId);
-              break;
-            }
-          } catch (e) {}
-        }
-      }
-
-      if (!zeroPolicyId && receipt.blockNumber) {
-        console.log("Using fallback with block number");
-        zeroPolicyId = ethers.keccak256(
-          ethers.AbiCoder.defaultAbiCoder().encode(
-            ["address", "uint256"],
-            [user2Address, receipt.blockNumber]
-          )
-        );
-        console.log("Calculated policy ID:", zeroPolicyId);
-      } else if (!zeroPolicyId) {
-        console.warn("Generated random ID for test continuation");
-        zeroPolicyId = ethers.hexlify(ethers.randomBytes(32));
-      }
-
-      expect(zeroPolicyId).to.not.be.undefined;
-      console.log("Policy ID confirmed:", zeroPolicyId);
-
-      console.log("Attempting to file claim with zero amount...");
+    const receipt = await tx.wait();
+    const event = receipt?.logs.find((log) => {
       try {
-        await policyBaseMock
-          .connect(user2)
-          .fileClaimWithoutSignature(
-            zeroPolicyId,
-            ethers.getBigInt(0),
-            "zero_document_hash"
-          ); // Use ethers.getBigInt(0) or 0n
-        // If the contract is expected to revert for zero amount claims, this line means the test might fail if it doesn't revert.
-        // If zero amount claims are allowed, then this is fine.
-        console.log("Zero amount claim was accepted");
-        // To make it fail if it doesn't revert:
-        // expect.fail("Zero amount claim should have been rejected with a revert");
-      } catch (error: any) {
-        console.log(
-          "Zero amount claim was rejected with error:",
-          error.message
+        return (
+          policyContract.interface.parseLog(log as any)?.name ===
+          "PolicyPurchased"
         );
-        expect(error.message).to.include("revert"); // Or a more specific revert reason if available
+      } catch {
+        return false;
       }
+    });
+    samplePolicyId = policyContract.interface.parseLog(event as any)?.args[0];
+  });
+
+  describe("Deployment & Initialization", function () {
+    it("Should deploy with correct vault address", async function () {
+      const vaultInfo = await policyContract.getVaultInfo();
+      expect(vaultInfo.vaultAddress).to.equal(vault.target);
+    });
+
+    it("Should set deployer as default admin", async function () {
+      const defaultAdminRole = await policyContract.DEFAULT_ADMIN_ROLE();
+      expect(await policyContract.hasRole(defaultAdminRole, owner.address)).to
+        .be.true;
+    });
+
+    it("Should set deployer as admin", async function () {
+      const adminRole = await policyContract.ADMIN_ROLE();
+      expect(await policyContract.hasRole(adminRole, owner.address)).to.be.true;
+    });
+
+    it("Should check vault approval status", async function () {
+      expect(await policyContract.isApprovedInVault()).to.be.true;
+    });
+  });
+
+  describe("Access Control", function () {
+    describe("ADMIN_ROLE management", function () {
+      it("Should allow admin to grant admin role", async function () {
+        const adminRole = await policyContract.ADMIN_ROLE();
+        await policyContract.connect(owner).grantRole(adminRole, user2.address);
+        expect(await policyContract.hasRole(adminRole, user2.address)).to.be
+          .true;
+      });
+
+      it("Should allow admin to revoke admin role", async function () {
+        const adminRole = await policyContract.ADMIN_ROLE();
+        await policyContract
+          .connect(owner)
+          .revokeRole(adminRole, admin.address);
+        expect(await policyContract.hasRole(adminRole, admin.address)).to.be
+          .false;
+      });
+
+      it("Should revert when non-admin tries to grant role", async function () {
+        const adminRole = await policyContract.ADMIN_ROLE();
+        await expect(
+          policyContract
+            .connect(unauthorized)
+            .grantRole(adminRole, user2.address)
+        ).to.be.revertedWithCustomError(
+          policyContract,
+          "AccessControlUnauthorizedAccount"
+        );
+      });
+    });
+  });
+
+  describe("Policy Purchase", function () {
+    describe("purchasePolicy (admin function)", function () {
+      it("Should allow admin to purchase policy", async function () {
+        const initialVaultBalance = await vault.getVaultBalance();
+
+        await expect(
+          policyContract
+            .connect(admin)
+            .purchasePolicy(
+              user2.address,
+              PREMIUM_AMOUNT,
+              SUM_ASSURED,
+              DURATION,
+              { value: PREMIUM_AMOUNT }
+            )
+        ).to.emit(policyContract, "PolicyPurchased");
+
+        expect(await vault.getVaultBalance()).to.equal(
+          initialVaultBalance + PREMIUM_AMOUNT
+        );
+      });
+
+      it("Should revert when non-admin tries to purchase policy", async function () {
+        // Get admin role
+        const adminRole = await policyContract.ADMIN_ROLE();
+
+        // Explicitly check that unauthorized user doesn't have admin role
+        expect(await policyContract.hasRole(adminRole, unauthorized.address)).to
+          .be.false;
+
+        // Attempt to purchase policy with unauthorized user
+        await expect(
+          policyContract
+            .connect(unauthorized)
+            .purchasePolicy(
+              user2.address,
+              PREMIUM_AMOUNT,
+              SUM_ASSURED,
+              DURATION,
+              { value: PREMIUM_AMOUNT }
+            )
+        )
+          .to.be.revertedWithCustomError(
+            policyContract,
+            "AccessControlUnauthorizedAccount"
+          )
+          .withArgs(unauthorized.address, adminRole);
+      });
+
+      it("Should revert with invalid owner address", async function () {
+        await expect(
+          policyContract
+            .connect(admin)
+            .purchasePolicy(
+              ethers.ZeroAddress,
+              PREMIUM_AMOUNT,
+              SUM_ASSURED,
+              DURATION,
+              { value: PREMIUM_AMOUNT }
+            )
+        ).to.be.revertedWith("Invalid owner");
+      });
+
+      it("Should revert with invalid parameters", async function () {
+        // Zero premium
+        await expect(
+          policyContract
+            .connect(admin)
+            .purchasePolicy(user2.address, 0, SUM_ASSURED, DURATION, {
+              value: 0,
+            })
+        ).to.be.revertedWith("Invalid parameters");
+
+        // Zero sum assured
+        await expect(
+          policyContract
+            .connect(admin)
+            .purchasePolicy(user2.address, PREMIUM_AMOUNT, 0, DURATION, {
+              value: PREMIUM_AMOUNT,
+            })
+        ).to.be.revertedWith("Invalid parameters");
+
+        // Zero duration
+        await expect(
+          policyContract
+            .connect(admin)
+            .purchasePolicy(user2.address, PREMIUM_AMOUNT, SUM_ASSURED, 0, {
+              value: PREMIUM_AMOUNT,
+            })
+        ).to.be.revertedWith("Invalid parameters");
+      });
+
+      it("Should revert with incorrect premium amount", async function () {
+        await expect(
+          policyContract
+            .connect(admin)
+            .purchasePolicy(
+              user2.address,
+              PREMIUM_AMOUNT,
+              SUM_ASSURED,
+              DURATION,
+              { value: PREMIUM_AMOUNT + 1n }
+            )
+        ).to.be.revertedWith("Incorrect premium");
+      });
+    });
+
+    describe("purchasePolicyWithoutSignature (test function)", function () {
+      it("Should create valid policy", async function () {
+        const tx = await policyContract
+          .connect(user2)
+          .purchasePolicyWithoutSignature(
+            user2.address,
+            PREMIUM_AMOUNT,
+            SUM_ASSURED,
+            DURATION,
+            { value: PREMIUM_AMOUNT }
+          );
+
+        const receipt = await tx.wait();
+        const event = receipt?.logs.find((log) => {
+          try {
+            return (
+              policyContract.interface.parseLog(log as any)?.name ===
+              "PolicyPurchased"
+            );
+          } catch {
+            return false;
+          }
+        });
+        const policyId = policyContract.interface.parseLog(event as any)
+          ?.args[0];
+
+        const policy = await policyContract.getPolicy(policyId);
+        expect(policy.owner).to.equal(user2.address);
+        expect(policy.premium).to.equal(PREMIUM_AMOUNT);
+        expect(policy.sumAssured).to.equal(SUM_ASSURED);
+        expect(policy.isActive).to.be.true;
+        expect(policy.isClaimed).to.be.false;
+      });
+
+      it("Should process mock policy data", async function () {
+        const tx = await policyContract
+          .connect(user2)
+          .purchasePolicyWithoutSignature(
+            user2.address,
+            PREMIUM_AMOUNT,
+            SUM_ASSURED,
+            DURATION,
+            { value: PREMIUM_AMOUNT }
+          );
+
+        const receipt = await tx.wait();
+        const event = receipt?.logs.find((log) => {
+          try {
+            return (
+              policyContract.interface.parseLog(log as any)?.name ===
+              "PolicyPurchased"
+            );
+          } catch {
+            return false;
+          }
+        });
+        const policyId = policyContract.interface.parseLog(event as any)
+          ?.args[0];
+
+        const mockData = await policyContract.getMockPolicyData(policyId);
+        expect(mockData.metadata).to.equal("Test Metadata");
+        expect(mockData.processed).to.be.true;
+      });
+    });
+  });
+
+  describe("Claim Management", function () {
+    describe("fileAndApproveClaim", function () {
+      it("Should allow admin to file and approve claim", async function () {
+        const initialUserBalance = await ethers.provider.getBalance(
+          user1.address
+        );
+
+        await expect(
+          policyContract
+            .connect(admin)
+            .fileAndApproveClaim(samplePolicyId, CLAIM_AMOUNT)
+        )
+          .to.emit(policyContract, "ClaimFiled")
+          .and.to.emit(policyContract, "ClaimApproved");
+
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.isClaimed).to.be.true;
+        expect(policy.isActive).to.be.false;
+
+        const finalUserBalance = await ethers.provider.getBalance(
+          user1.address
+        );
+        expect(finalUserBalance).to.equal(initialUserBalance + CLAIM_AMOUNT);
+      });
+
+      it("Should revert when non-admin tries to file claim", async function () {
+        await expect(
+          policyContract
+            .connect(unauthorized)
+            .fileAndApproveClaim(samplePolicyId, CLAIM_AMOUNT)
+        ).to.be.revertedWithCustomError(
+          policyContract,
+          "AccessControlUnauthorizedAccount"
+        );
+      });
+
+      it("Should revert for non-existent policy", async function () {
+        const fakePolicyId = ethers.keccak256(ethers.toUtf8Bytes("fake"));
+        await expect(
+          policyContract
+            .connect(admin)
+            .fileAndApproveClaim(fakePolicyId, CLAIM_AMOUNT)
+        ).to.be.revertedWith("Policy does not exist");
+      });
+
+      it("Should revert for inactive policy", async function () {
+        await policyContract
+          .connect(admin)
+          .setPolicyState(samplePolicyId, false, false);
+
+        await expect(
+          policyContract
+            .connect(admin)
+            .fileAndApproveClaim(samplePolicyId, CLAIM_AMOUNT)
+        ).to.be.revertedWith("Policy not active");
+      });
+
+      it("Should revert for already claimed policy", async function () {
+        await policyContract
+          .connect(admin)
+          .setPolicyState(samplePolicyId, true, true);
+
+        await expect(
+          policyContract
+            .connect(admin)
+            .fileAndApproveClaim(samplePolicyId, CLAIM_AMOUNT)
+        ).to.be.revertedWith("Policy already claimed");
+      });
+
+      it("Should revert for zero claim amount", async function () {
+        await expect(
+          policyContract.connect(admin).fileAndApproveClaim(samplePolicyId, 0)
+        ).to.be.revertedWith("Invalid amount");
+      });
+
+      it("Should revert when claim exceeds sum assured", async function () {
+        const excessiveAmount = SUM_ASSURED + ethers.parseEther("1.0");
+        await expect(
+          policyContract
+            .connect(admin)
+            .fileAndApproveClaim(samplePolicyId, excessiveAmount)
+        ).to.be.revertedWith("Amount exceeds sum assured");
+      });
+    });
+
+    describe("fileClaimWithoutSignature (test function)", function () {
+      it("Should file claim with pending status", async function () {
+        await expect(
+          policyContract
+            .connect(user1)
+            .fileClaimWithoutSignature(samplePolicyId, CLAIM_AMOUNT)
+        ).to.emit(policyContract, "ClaimFiled");
+
+        const claim = await policyContract.getClaim(samplePolicyId);
+        expect(claim.amount).to.equal(CLAIM_AMOUNT);
+        expect(claim.isPending).to.be.true;
+      });
+
+      it("Should revert for duplicate claims", async function () {
+        await policyContract
+          .connect(user1)
+          .fileClaimWithoutSignature(samplePolicyId, CLAIM_AMOUNT);
+
+        await expect(
+          policyContract
+            .connect(user1)
+            .fileClaimWithoutSignature(samplePolicyId, CLAIM_AMOUNT)
+        ).to.be.revertedWith("Claim exists");
+      });
+    });
+
+    describe("approveClaimWithoutVerification (test function)", function () {
+      beforeEach(async function () {
+        await policyContract
+          .connect(admin)
+          .createMockClaim(samplePolicyId, CLAIM_AMOUNT, true);
+      });
+
+      it("Should approve pending claim", async function () {
+        await expect(
+          policyContract
+            .connect(admin)
+            .approveClaimWithoutVerification(samplePolicyId)
+        ).to.emit(policyContract, "ClaimApproved");
+
+        const claim = await policyContract.getClaim(samplePolicyId);
+        expect(claim.isPending).to.be.false;
+
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.isClaimed).to.be.true;
+        expect(policy.isActive).to.be.false;
+      });
+
+      it("Should revert when no pending claim exists", async function () {
+        await policyContract
+          .connect(admin)
+          .setClaimState(samplePolicyId, false);
+
+        await expect(
+          policyContract
+            .connect(admin)
+            .approveClaimWithoutVerification(samplePolicyId)
+        ).to.be.revertedWith("No pending claim");
+      });
+    });
+  });
+
+  describe("Policy Cancellation", function () {
+    describe("cancelPolicy", function () {
+      it("Should allow admin to cancel policy", async function () {
+        const initialUserBalance = await ethers.provider.getBalance(
+          user1.address
+        );
+
+        await expect(
+          policyContract
+            .connect(admin)
+            .cancelPolicy(samplePolicyId, REFUND_AMOUNT)
+        ).to.emit(policyContract, "PolicyCancelled");
+
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.isActive).to.be.false;
+
+        const finalUserBalance = await ethers.provider.getBalance(
+          user1.address
+        );
+        expect(finalUserBalance).to.equal(initialUserBalance + REFUND_AMOUNT);
+      });
+
+      it("Should revert when non-admin tries to cancel", async function () {
+        await expect(
+          policyContract
+            .connect(unauthorized)
+            .cancelPolicy(samplePolicyId, REFUND_AMOUNT)
+        ).to.be.revertedWithCustomError(
+          policyContract,
+          "AccessControlUnauthorizedAccount"
+        );
+      });
+
+      it("Should revert for inactive policy", async function () {
+        await policyContract
+          .connect(admin)
+          .setPolicyState(samplePolicyId, false, false);
+
+        await expect(
+          policyContract
+            .connect(admin)
+            .cancelPolicy(samplePolicyId, REFUND_AMOUNT)
+        ).to.be.revertedWith("Policy not active");
+      });
+    });
+
+    describe("cancelPolicyWithoutSignature (test function)", function () {
+      it("Should cancel policy and send refund", async function () {
+        await expect(
+          policyContract
+            .connect(admin)
+            .cancelPolicyWithoutSignature(samplePolicyId, REFUND_AMOUNT)
+        ).to.emit(policyContract, "PolicyCancelled");
+
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.isActive).to.be.false;
+      });
+    });
+  });
+
+  describe("Policy Renewal", function () {
+    describe("renewPolicy", function () {
+      it("Should allow policy owner to renew policy", async function () {
+        const renewalPremium = ethers.parseEther("0.5");
+        const renewalDuration = 180 * 24 * 60 * 60; // 6 months
+        const originalExpiry = (await policyContract.getPolicy(samplePolicyId))
+          .expiry;
+
+        await expect(
+          policyContract
+            .connect(user1)
+            .renewPolicy(samplePolicyId, renewalPremium, renewalDuration, {
+              value: renewalPremium,
+            })
+        ).to.emit(policyContract, "PolicyRenewed");
+
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.premium).to.equal(renewalPremium);
+        expect(policy.expiry).to.equal(
+          originalExpiry + BigInt(renewalDuration)
+        );
+      });
+
+      it("Should revert when non-owner tries to renew", async function () {
+        const renewalPremium = ethers.parseEther("0.5");
+        const renewalDuration = 180 * 24 * 60 * 60;
+
+        await expect(
+          policyContract
+            .connect(user2)
+            .renewPolicy(samplePolicyId, renewalPremium, renewalDuration, {
+              value: renewalPremium,
+            })
+        ).to.be.revertedWith("Not the policy owner");
+      });
+
+      it("Should revert for claimed policy", async function () {
+        await policyContract
+          .connect(admin)
+          .setPolicyState(samplePolicyId, true, true);
+        const renewalPremium = ethers.parseEther("0.5");
+        const renewalDuration = 180 * 24 * 60 * 60;
+
+        await expect(
+          policyContract
+            .connect(user1)
+            .renewPolicy(samplePolicyId, renewalPremium, renewalDuration, {
+              value: renewalPremium,
+            })
+        ).to.be.revertedWith("Policy already claimed");
+      });
+
+      it("Should revert with incorrect premium", async function () {
+        const renewalPremium = ethers.parseEther("0.5");
+        const renewalDuration = 180 * 24 * 60 * 60;
+
+        await expect(
+          policyContract
+            .connect(user1)
+            .renewPolicy(samplePolicyId, renewalPremium, renewalDuration, {
+              value: renewalPremium + 1n,
+            })
+        ).to.be.revertedWith("Incorrect premium");
+      });
+    });
+  });
+
+  describe("View Functions", function () {
+    describe("getPolicy", function () {
+      it("Should return correct policy data", async function () {
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.owner).to.equal(user1.address);
+        expect(policy.premium).to.equal(PREMIUM_AMOUNT);
+        expect(policy.sumAssured).to.equal(SUM_ASSURED);
+        expect(policy.isActive).to.be.true;
+        expect(policy.isClaimed).to.be.false;
+      });
+    });
+
+    describe("getClaim", function () {
+      it("Should return empty claim for new policy", async function () {
+        const claim = await policyContract.getClaim(samplePolicyId);
+        expect(claim.amount).to.equal(0);
+        expect(claim.isPending).to.be.false;
+      });
+
+      it("Should return correct claim data after filing", async function () {
+        await policyContract
+          .connect(user1)
+          .fileClaimWithoutSignature(samplePolicyId, CLAIM_AMOUNT);
+
+        const claim = await policyContract.getClaim(samplePolicyId);
+        expect(claim.amount).to.equal(CLAIM_AMOUNT);
+        expect(claim.isPending).to.be.true;
+      });
+    });
+
+    describe("getClaimStatus", function () {
+      it("Should return correct status for new policy", async function () {
+        const status = await policyContract.getClaimStatus(samplePolicyId);
+        expect(status.hasClaim).to.be.false;
+        expect(status.amount).to.equal(0);
+        expect(status.isPending).to.be.false;
+        expect(status.isApproved).to.be.false;
+      });
+
+      it("Should return correct status for pending claim", async function () {
+        await policyContract
+          .connect(user1)
+          .fileClaimWithoutSignature(samplePolicyId, CLAIM_AMOUNT);
+
+        const status = await policyContract.getClaimStatus(samplePolicyId);
+        expect(status.hasClaim).to.be.true;
+        expect(status.amount).to.equal(CLAIM_AMOUNT);
+        expect(status.isPending).to.be.true;
+        expect(status.isApproved).to.be.false;
+      });
+
+      it("Should return correct status for approved claim", async function () {
+        await policyContract
+          .connect(admin)
+          .fileAndApproveClaim(samplePolicyId, CLAIM_AMOUNT);
+
+        const status = await policyContract.getClaimStatus(samplePolicyId);
+        expect(status.hasClaim).to.be.true;
+        expect(status.amount).to.equal(CLAIM_AMOUNT);
+        expect(status.isPending).to.be.false;
+        expect(status.isApproved).to.be.true;
+      });
+    });
+
+    describe("getVaultInfo", function () {
+      it("Should return correct vault information", async function () {
+        const vaultInfo = await policyContract.getVaultInfo();
+        expect(vaultInfo.vaultAddress).to.equal(vault.target);
+        expect(vaultInfo.vaultBalance).to.be.gt(0);
+        expect(vaultInfo.isApproved).to.be.true;
+      });
+    });
+
+    describe("isApprovedInVault", function () {
+      it("Should return true when approved", async function () {
+        expect(await policyContract.isApprovedInVault()).to.be.true;
+      });
+
+      it("Should return false when not approved", async function () {
+        await vault.connect(owner).revokeContract(policyContract.target);
+        expect(await policyContract.isApprovedInVault()).to.be.false;
+      });
+    });
+  });
+
+  describe("Test Utility Functions", function () {
+    describe("Mock data functions", function () {
+      it("Should set and get mock policy data", async function () {
+        const mockData = await policyContract.getMockPolicyData(samplePolicyId);
+        expect(mockData.metadata).to.equal("Test Metadata");
+        expect(mockData.processed).to.be.true;
+      });
+    });
+
+    describe("Admin test utilities", function () {
+      it("Should allow admin to force expire policy", async function () {
+        await policyContract.connect(admin).forceExpirePolicy(samplePolicyId);
+
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.isActive).to.be.false;
+        expect(policy.expiry).to.be.lt(
+          await ethers.provider.getBlock("latest").then((b) => b!.timestamp)
+        );
+      });
+
+      it("Should allow admin to set expiry timestamp", async function () {
+        const newExpiry = Math.floor(Date.now() / 1000) + 1000;
+        await policyContract
+          .connect(admin)
+          .setExpiryTimestamp(samplePolicyId, newExpiry);
+
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.expiry).to.equal(newExpiry);
+      });
+
+      it("Should allow admin to set claim state", async function () {
+        await policyContract
+          .connect(admin)
+          .createMockClaim(samplePolicyId, CLAIM_AMOUNT, true);
+        await policyContract
+          .connect(admin)
+          .setClaimState(samplePolicyId, false);
+
+        const claim = await policyContract.getClaim(samplePolicyId);
+        expect(claim.isPending).to.be.false;
+      });
+
+      it("Should allow admin to set policy state", async function () {
+        await policyContract
+          .connect(admin)
+          .setPolicyState(samplePolicyId, false, true);
+
+        const policy = await policyContract.getPolicy(samplePolicyId);
+        expect(policy.isActive).to.be.false;
+        expect(policy.isClaimed).to.be.true;
+      });
+
+      it("Should allow admin to create mock claim", async function () {
+        const newPolicyId = ethers.keccak256(ethers.toUtf8Bytes("test2"));
+
+        // Create a new policy first
+        await policyContract
+          .connect(user2)
+          .purchasePolicyWithoutSignature(
+            user2.address,
+            PREMIUM_AMOUNT,
+            SUM_ASSURED,
+            DURATION,
+            { value: PREMIUM_AMOUNT }
+          );
+
+        await expect(
+          policyContract
+            .connect(admin)
+            .createMockClaim(samplePolicyId, CLAIM_AMOUNT, true)
+        ).to.emit(policyContract, "ClaimFiled");
+
+        const claim = await policyContract.getClaim(samplePolicyId);
+        expect(claim.amount).to.equal(CLAIM_AMOUNT);
+        expect(claim.isPending).to.be.true;
+      });
+    });
+  });
+
+  describe("Integration Tests", function () {
+    it("Should handle complete policy lifecycle", async function () {
+      // 1. Purchase policy
+      const tx = await policyContract
+        .connect(user2)
+        .purchasePolicyWithoutSignature(
+          user2.address,
+          PREMIUM_AMOUNT,
+          SUM_ASSURED,
+          DURATION,
+          { value: PREMIUM_AMOUNT }
+        );
+
+      const receipt = await tx.wait();
+      const event = receipt?.logs.find((log) => {
+        try {
+          return (
+            policyContract.interface.parseLog(log as any)?.name ===
+            "PolicyPurchased"
+          );
+        } catch {
+          return false;
+        }
+      });
+      const policyId = policyContract.interface.parseLog(event as any)?.args[0];
+
+      // 2. File claim
+      await policyContract
+        .connect(user2)
+        .fileClaimWithoutSignature(policyId, CLAIM_AMOUNT);
+
+      // 3. Approve claim
+      await policyContract
+        .connect(admin)
+        .approveClaimWithoutVerification(policyId);
+
+      // 4. Verify final state
+      const policy = await policyContract.getPolicy(policyId);
+      expect(policy.isClaimed).to.be.true;
+      expect(policy.isActive).to.be.false;
+    });
+
+    it("Should handle policy renewal lifecycle", async function () {
+      const renewalPremium = ethers.parseEther("0.3");
+      const renewalDuration = 90 * 24 * 60 * 60; // 3 months
+
+      // Renew policy
+      await policyContract
+        .connect(user1)
+        .renewPolicyWithoutSignature(
+          samplePolicyId,
+          renewalPremium,
+          renewalDuration,
+          { value: renewalPremium }
+        );
+
+      // Verify renewal
+      const policy = await policyContract.getPolicy(samplePolicyId);
+      expect(policy.premium).to.equal(renewalPremium);
+    });
+
+    it("Should handle policy cancellation with refund", async function () {
+      const initialBalance = await ethers.provider.getBalance(user1.address);
+
+      await policyContract
+        .connect(admin)
+        .cancelPolicyWithoutSignature(samplePolicyId, REFUND_AMOUNT);
+
+      const finalBalance = await ethers.provider.getBalance(user1.address);
+      expect(finalBalance).to.equal(initialBalance + REFUND_AMOUNT);
+
+      const policy = await policyContract.getPolicy(samplePolicyId);
+      expect(policy.isActive).to.be.false;
+    });
+  });
+
+  describe("Error Handling & Edge Cases", function () {
+    it("Should handle vault transfer failures gracefully", async function () {
+      // Revoke vault approval to simulate transfer failure
+      await vault.connect(owner).revokeContract(policyContract.target);
+
+      await expect(
+        policyContract
+          .connect(admin)
+          .fileAndApproveClaim(samplePolicyId, CLAIM_AMOUNT)
+      ).to.be.reverted; // Should fail due to vault not being approved
+    });
+    it("Should handle expired policies correctly", async function () {
+      // Get current blockchain timestamp
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const currentTime = currentBlock!.timestamp;
+
+      // Set the policy to an expired timestamp but keep it active
+      await policyContract
+        .connect(admin)
+        .setExpiryTimestamp(samplePolicyId, currentTime - 3600); // 1 hour in the past
+
+      // IMPORTANT: Explicitly ensure policy is active
+      await policyContract
+        .connect(admin)
+        .setPolicyState(samplePolicyId, true, false);
+
+      // Verify policy state after our modifications
+      const policy = await policyContract.getPolicy(samplePolicyId);
+      expect(policy.isActive).to.be.true;
+      expect(Number(policy.expiry)).to.be.lessThan(currentTime);
+
+      // Now try to claim on the expired but active policy
+      await expect(
+        policyContract
+          .connect(admin)
+          .fileAndApproveClaim(samplePolicyId, CLAIM_AMOUNT)
+      ).to.emit(policyContract, "ClaimApproved");
+    });
+
+    it("Should handle zero policy ID correctly", async function () {
+      const zeroPolicyId =
+        "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+      await expect(
+        policyContract
+          .connect(admin)
+          .fileAndApproveClaim(zeroPolicyId, CLAIM_AMOUNT)
+      ).to.be.revertedWith("Policy does not exist");
     });
   });
 });
