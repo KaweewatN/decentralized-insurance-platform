@@ -5,6 +5,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
+    "@openzeppelin/contracts": "^4.9.3",
     "lerna": "^8.2.2"
   },
   "workspaces": [
@@ -36,5 +37,8 @@
     "remove-frontend": "lerna remove --scope frontend",
     "remove-backend": "lerna remove --scope backend",
     "remove-contracts": "lerna remove --scope contracts"
+  },
+  "devDependencies": {
+    "@chainlink/functions-toolkit": "github:smartcontractkit/functions-toolkit"
   }
 }
