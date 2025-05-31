@@ -8,7 +8,10 @@ dotenv.config();
 async function main() {
   const signer = new ethers.Wallet(process.env.BACKEND_SIGNER_PRIVATE_KEY!);
   const contractAddress = process.env.FLIGHT_CONTRACT_ADDRESS!;
-  const flightInsurance = await ethers.getContractAt("FlightInsurance", contractAddress);
+  const flightInsurance = await ethers.getContractAt(
+    "FlightInsurance",
+    contractAddress
+  );
 
   const flightNumber = "TH102";
   const flightTime = Math.floor(Date.now() / 1000) + 3600 * 24; // Tomorrow
@@ -29,15 +32,21 @@ async function main() {
 
   // Step 3: Call createPolicy
   const [user] = await ethers.getSigners();
-  const tx = await flightInsurance.connect(user).createPolicy(
-    flightNumber,
-    flightTime,
-    coverage,
-    numPersons,
-    premium,
-    signature,
-    { value: premium }
+  const transactionHash = ethers.keccak256(
+    ethers.toUtf8Bytes(`${flightNumber}-${Date.now()}`)
   );
+  const tx = await flightInsurance
+    .connect(user)
+    .createPolicy(
+      flightNumber,
+      flightTime,
+      coverage,
+      numPersons,
+      premium,
+      transactionHash,
+      signature,
+      { value: premium }
+    );
 
   await tx.wait();
   console.log("✅ Policy created");

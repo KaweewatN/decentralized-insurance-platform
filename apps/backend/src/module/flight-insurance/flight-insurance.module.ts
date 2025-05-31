@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import { FlightInsuranceController } from './flight-insurance.controller';
 import { FlightInsuranceService } from './flight-insurance.service';
 import { SupabaseService } from '../file-upload/supabase.service';
-import { Web3Module } from 'src/service/web3/web3.module';
+import { Web3Module } from '../../service/web3/web3.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({

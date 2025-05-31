@@ -19,7 +19,7 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "types": ["node", "jest", "@types/passport-jwt"],
+    "types": ["node", "jest", "@types/passport-jwt", "Multer"],
     "paths": {
       "app.module": ["app.module.ts"],
       "contracts/contracts.service": ["contracts/contracts.service.ts"]

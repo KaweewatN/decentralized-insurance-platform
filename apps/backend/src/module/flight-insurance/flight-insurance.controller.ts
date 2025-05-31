@@ -8,14 +8,13 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
-import { JwtGuard } from 'src/module/auth/guards';
+import { JwtGuard } from '../../module/auth/guards';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FlightInsuranceService } from './flight-insurance.service';
 import { SupabaseService } from '../file-upload/supabase.service';
 import { ParseFloatPipe } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
 
 @Controller('flight-insurance')
 export class FlightInsuranceController {

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { InsuranceModule } from './insurance/insurance.module';
+import { InsuranceModule } from './module/life&health/insurance.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OracleFlightModule } from './module/oracle-flight/oracle-flight.module';

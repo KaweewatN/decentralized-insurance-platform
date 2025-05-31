@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../file-upload/supabase.service';
 import { Wallet, getBytes } from 'ethers';
-import { PrismaService } from 'src/service/prisma/prisma.service';
+import { PrismaService } from '../../service/prisma/prisma.service';
 import { solidityPackedKeccak256, ethers } from 'ethers';
 
 import {
