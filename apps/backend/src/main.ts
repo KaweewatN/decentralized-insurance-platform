@@ -1,19 +1,22 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  app.enableCors();
+  app.enableCors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+  });
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
   app.setGlobalPrefix('api');
-
-  const port = process.env.PORT || 3001;
-  await app.listen(port);
-
-  console.log(`🚀 Insurance Backend running on http://localhost:${port}/api`);
-  console.log(`📊 Status: http://localhost:${port}/api/status`);
-  console.log(`💱 Rate: http://localhost:${port}/api/exchange-rate`);
-  console.log(`🏥 Health: http://localhost:${port}/api/health/*`);
-  console.log(`❤️ Life: http://localhost:${port}/api/life/*`);
-}
-bootstrap();
+  await app.listen(process.env.PORT ?? 3001);
+  console.log(
+    `🚀 Server is running on http://localhost:${process.env.PORT ?? 3001}`,
+  );
+  console.log(`🚀 Insurance Backend running on http://localhost:${process.env.PORT}/api`);
+  console.log(`📊 Status: http://localhost:${process.env.PORT}/api/status`);
+  console.log(`💱 Rate: http://localhost:${process.env.PORT}/api/exchange-rate`);
+  console.log(`🏥 Health: http://localhost:${process.env.PORT}/api/health/*`);
+  console.log(`❤️ Life: http://localhost:${process.env.PORT}/api/life/*`);

@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "./generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  DEVELOPER
+}
+
+model User {
+  walletAddress String   @id @unique
+  username      String?  @unique
+  fullName      String?
+  imageUrl      String?
+  age           Int
+  gender        String
+  occupation    String
+  contactInfo   String
+  role          UserRole @default(USER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  policies Policy[]
+  claims   Claim[]
+}
+
+enum PolicyStatus {
+  All
+  Active
+  Expired
+  PendingPayment
+  Claimed
+}
+
+model Policy {
+  id                String       @id @default(uuid())
+  walletAddress     String
+  premium           Decimal      @db.Decimal(10, 5)
+  sumAssured        Decimal      @db.Decimal(10, 5)
+  coverageAmount    Decimal      @db.Decimal(10, 5)
+  status            PolicyStatus
+  coverageStartDate DateTime
+  coverageEndDate   DateTime
+  transactionHash   String
+  contractAddress   String
+  documentUrl       String?
+  planTypeId        Int
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  user     User       @relation(fields: [walletAddress], references: [walletAddress])
+  planType PolicyType @relation(fields: [planTypeId], references: [id])
+  claims   Claim[]
+
+  flightPolicy   FlightPolicy?
+  rainfallPolicy RainfallPolicy?
+  healthPolicy   HealthPolicy?
+
+  @@index([walletAddress])
+}
+
+enum ClaimType {
+  HEALTH
+  FLIGHT
+  RAINFALL
+}
+
+model Claim {
+  id              String    @id @default(uuid())
+  walletAddress   String
+  policyId        String
+  amount          Decimal   @db.Decimal(10, 2)
+  transactionHash String    @unique
+  documentUrl     String?
+  status          String    @default("Pending")
+  contractAddress String?
+  approvedDate    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  type            ClaimType @default(HEALTH)
+
+  user   User   @relation(fields: [walletAddress], references: [walletAddress])
+  policy Policy @relation(fields: [policyId], references: [id])
+}
+
+model FlightPolicy {
+  id             String   @id @default(uuid())
+  policyId       String   @unique
+  airline        String
+  flightNumber   String
+  depAirport     String
+  arrAirport     String
+  depTime        String
+  flightDate     DateTime
+  depCountry     String
+  arrCountry     String
+  coverageAmount Decimal  @db.Decimal(10, 2)
+  numPersons     Int
+  createdAt      DateTime @default(now())
+  policy         Policy   @relation(fields: [policyId], references: [id])
+}
+
+model HealthPolicy {
+  id        String @id @default(uuid())
+  policyId  String @unique
+  hospital  String
+  diagnosis String
+  policy    Policy @relation(fields: [policyId], references: [id])
+}
+
+model RainfallPolicy {
+  id       String  @id @default(uuid())
+  policyId String  @unique
+  location String
+  rainfall Decimal @db.Decimal(5, 2)
+  policy   Policy  @relation(fields: [policyId], references: [id])
+}
+
+model PolicyType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  policies Policy[]
+}
