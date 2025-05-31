@@ -4,7 +4,6 @@ import { SupabaseService } from '../file-upload/supabase.service';
 import { Wallet, getBytes } from 'ethers';
 import { PrismaService } from 'src/service/prisma/prisma.service';
 import { solidityPackedKeccak256, ethers } from 'ethers';
-import { Web3Service } from 'src/service/web3/web3.service';
 
 import {
   airlineRisk,
@@ -20,7 +19,6 @@ export class FlightInsuranceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
-    private readonly web3Service: Web3Service,
     private readonly supabaseService: SupabaseService,
     @Inject('Contract') private contract: ethers.Contract,
   ) {}
@@ -234,6 +232,72 @@ export class FlightInsuranceService {
     return { message: 'Payment confirmed and policy recorded on-chain.' };
   }
 
+  // async approveApplication(applicationId: string) {
+  //   const policy = await this.prisma.policy.findUnique({
+  //     where: { id: applicationId },
+  //   });
+  //   if (!policy) throw new Error('Application not found');
+  //   const updated = await this.prisma.policy.update({
+  //     where: { id: applicationId },
+  //     data: { status: 'Active' },
+  //   });
+  //   return { message: 'Application approved', data: [updated] };
+  // }
+
+  // // Check approval using real DB
+  // async isApplicationApproved(applicationId: string): Promise<boolean> {
+  //   const policy = await this.prisma.policy.findUnique({
+  //     where: { id: applicationId },
+  //   });
+  //   if (!policy) throw new Error('Application not found');
+  //   return policy.status === 'Active';
+  // }
+
+  // // Logic check only (no change needed)
+  // async verifyAndPay(
+  //   applicationId: string,
+  // ): Promise<{ eligible: boolean; reason?: string }> {
+  //   const isApproved = await this.isApplicationApproved(applicationId);
+  //   return isApproved
+  //     ? { eligible: true }
+  //     : { eligible: false, reason: 'Application not approved' };
+  // }
+
+  // // Confirm payment using real DB
+  // async confirmPayment(
+  //   applicationId: string,
+  //   policyIdOnChain: number,
+  //   transactionHash: string,
+  // ) {
+  //   const policy = await this.prisma.policy.findUnique({
+  //     where: { id: applicationId },
+  //   });
+  //   if (!policy) throw new Error('Application not found');
+
+  //   // Fetch on-chain policy data
+  //   const onChainPolicy = await this.contract.policies(policyIdOnChain);
+
+  //   // Compare important fields (example: walletAddress)
+  //   if (
+  //     policy.walletAddress.toLowerCase() !== onChainPolicy.user.toLowerCase()
+  //   ) {
+  //     throw new Error('Wallet address mismatch between DB and on-chain');
+  //   }
+  //   // Add more field comparisons as needed
+
+  //   // Update DB with on-chain info
+  //   await this.prisma.policy.update({
+  //     where: { id: applicationId },
+  //     data: {
+  //       status: 'Active',
+  //       // policyIdOnChain: policyIdOnChain,
+  //       transactionHash: transactionHash,
+  //       // policyCreatedAt: new Date(),
+  //     },
+  //   });
+  //   return { message: 'Payment confirmed and policy recorded on-chain.' };
+  // }
+
   /// 🔐 Internal signer for hashed message (used by generateSignature)
   async signPremium(
     flightNumber: string,
@@ -303,7 +367,11 @@ export class FlightInsuranceService {
         };
       }),
     );
-
     return policies;
+  }
+
+  async getContractCount(): Promise<number> {
+    const count = await this.contract.count();
+    return Number(count); // Convert bigint to number if needed
   }
 }

@@ -9,7 +9,7 @@ export class UserService {
     return this.prisma.policy.findMany({
       where: {
         walletAddress,
-        ...(policyId && { id: Number(policyId) }),
+        ...(policyId && { id: String(policyId) }),
       },
       orderBy: { createdAt: 'desc' },
       include: {

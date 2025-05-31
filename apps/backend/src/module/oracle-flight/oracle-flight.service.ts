@@ -131,7 +131,7 @@ export class OracleFlightService {
           if (updated.eligibleForPayout) {
             // 1. Update policy status to 'claimed'
             await this.prisma.policy.update({
-              where: { id: policyId },
+              where: { id: String(policyId) },
               data: { status: PolicyStatus.Claimed },
             });
 
@@ -139,7 +139,7 @@ export class OracleFlightService {
             await this.prisma.claim.create({
               data: {
                 walletAddress: updated.holder,
-                policyId: policyId,
+                policyId: String(policyId),
                 amount: updated.payoutAmount,
                 transactionHash: tx.hash,
                 contractAddress: this.contract.target.toString(),

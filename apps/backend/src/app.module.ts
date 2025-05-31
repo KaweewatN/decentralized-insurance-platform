@@ -5,11 +5,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { OracleFlightModule } from './module/oracle-flight/oracle-flight.module';
 import { FlightInsuranceModule } from './module/flight-insurance/flight-insurance.module';
 import { PriceModule } from './module/price/price.module';
-import { OracleModule } from './module/oracle/oracle.module';
 import { WalletModule } from './module/wallet/wallet.module';
 import { PrismaModule } from './service/prisma/prisma.module';
 import { AuthModule } from './module/auth/auth.module';
 import { UserModule } from './module/user/user.module';
+import { AdminModule } from './module/admin/admin.module';
 
 @Module({
   imports: [
@@ -21,12 +21,12 @@ import { UserModule } from './module/user/user.module';
     ScheduleModule.forRoot(),
     OracleFlightModule,
     PriceModule,
-    OracleModule,
     WalletModule,
     AuthModule,
     PrismaModule,
     FlightInsuranceModule,
     UserModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

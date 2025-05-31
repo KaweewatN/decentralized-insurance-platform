@@ -33,11 +33,9 @@ model User {
   role          UserRole @default(USER)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  nonce         String?
 
   policies Policy[]
   claims   Claim[]
-  events   EventLog[]
 }
 
 enum PolicyStatus {
@@ -49,7 +47,7 @@ enum PolicyStatus {
 }
 
 model Policy {
-  id                Int          @id @default(autoincrement())
+  id                String       @id @default(uuid())
   walletAddress     String
   premium           Decimal      @db.Decimal(10, 5)
   sumAssured        Decimal      @db.Decimal(10, 5)
@@ -82,9 +80,9 @@ enum ClaimType {
 }
 
 model Claim {
-  id              Int       @id @default(autoincrement())
+  id              String    @id @default(uuid())
   walletAddress   String
-  policyId        Int
+  policyId        String
   amount          Decimal   @db.Decimal(10, 2)
   transactionHash String    @unique
   documentUrl     String?
@@ -100,8 +98,8 @@ model Claim {
 }
 
 model FlightPolicy {
-  id             Int      @id @default(autoincrement())
-  policyId       Int      @unique
+  id             String   @id @default(uuid())
+  policyId       String   @unique
   airline        String
   flightNumber   String
   depAirport     String
@@ -117,32 +115,19 @@ model FlightPolicy {
 }
 
 model HealthPolicy {
-  id        Int    @id @default(autoincrement())
-  policyId  Int    @unique
+  id        String @id @default(uuid())
+  policyId  String @unique
   hospital  String
   diagnosis String
   policy    Policy @relation(fields: [policyId], references: [id])
 }
 
 model RainfallPolicy {
-  id       Int     @id @default(autoincrement())
-  policyId Int     @unique
+  id       String  @id @default(uuid())
+  policyId String  @unique
   location String
   rainfall Decimal @db.Decimal(5, 2)
   policy   Policy  @relation(fields: [policyId], references: [id])
-}
-
-model EventLog {
-  id            Int      @id @default(autoincrement())
-  walletAddress String
-  event_type    String
-  amount        Decimal? @db.Decimal(10, 2)
-  tx_hash       String?  @unique
-  timestamp     DateTime
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation(fields: [walletAddress], references: [walletAddress])
 }
 
 model PolicyType {

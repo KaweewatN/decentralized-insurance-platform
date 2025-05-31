@@ -66,7 +66,6 @@ export default function AccountPage({
     const fetchEthPrice = async () => {
       try {
         const data = await apiService.get<any>("/price/eththb", accessToken);
-        console.log("ETH Price Response:", data);
         setEthPriceThb(Number(data?.ethToThb));
       } catch (err) {
         console.error("Fetch error:", err);

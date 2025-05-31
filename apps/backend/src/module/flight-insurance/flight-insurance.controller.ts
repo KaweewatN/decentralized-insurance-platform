@@ -121,6 +121,12 @@ export class FlightInsuranceController {
     return { policies: history };
   }
 
+  @Get('policy-count')
+  async getPolicyCount() {
+    const count = await this.flightInsuranceService.getContractCount();
+    return { count };
+  }
+
   // Endpoint to get the ABI and contract address
   @Get('abi')
   getAbi() {
