@@ -716,8 +716,8 @@ export class Web3Service implements OnModuleInit {
       try {
         const tx1 = await vault.methods.approveContract(lifeCareAddress).send({
           from: this.adminAccount.address,
-          gas: 100000,
-          gasPrice,
+          gas: '100000',
+          gasPrice: gasPrice.toString(),
         });
         results.push({
           contract: 'LifeCare',
@@ -739,8 +739,8 @@ export class Web3Service implements OnModuleInit {
           .approveContract(healthCareAddress)
           .send({
             from: this.adminAccount.address,
-            gas: 100000,
-            gasPrice,
+            gas: '100000',
+            gasPrice: gasPrice.toString(),
           });
         results.push({
           contract: 'HealthCare',
