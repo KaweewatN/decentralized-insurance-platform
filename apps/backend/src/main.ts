@@ -15,5 +15,8 @@ async function bootstrap() {
   console.log(
     `🚀 Server is running on http://localhost:${process.env.PORT ?? 3001}`,
   );
-}
-bootstrap();
+  console.log(`🚀 Insurance Backend running on http://localhost:${process.env.PORT}/api`);
+  console.log(`📊 Status: http://localhost:${process.env.PORT}/api/status`);
+  console.log(`💱 Rate: http://localhost:${process.env.PORT}/api/exchange-rate`);
+  console.log(`🏥 Health: http://localhost:${process.env.PORT}/api/health/*`);
+  console.log(`❤️ Life: http://localhost:${process.env.PORT}/api/life/*`);
