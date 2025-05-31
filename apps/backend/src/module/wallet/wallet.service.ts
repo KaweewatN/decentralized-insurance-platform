@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Web3Service } from 'src/service/web3/web3.service';
+import { Web3Service } from '../../service/web3/web3.service';
 
 @Injectable()
 export class WalletService {

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ethers } from 'ethers';
-import * as contractJson from 'abis/FlightInsurance.json';
-import { PrismaService } from 'src/service/prisma/prisma.service';
+import * as contractJson from '../../../abis/FlightInsurance.json';
+import { PrismaService } from '../../service/prisma/prisma.service';
 import { PolicyStatus, ClaimType } from '@prisma/client';
 import axios from 'axios';
 

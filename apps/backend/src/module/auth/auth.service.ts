@@ -1,5 +1,5 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { PrismaService } from 'src/service/prisma/prisma.service';
+import { PrismaService } from '../../service/prisma/prisma.service';
 import * as jwt from 'jsonwebtoken';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, UseGuards, Query } from '@nestjs/common';
 import { WalletService } from './wallet.service';
-import { JwtGuard } from 'src/module/auth/guards';
+import { JwtGuard } from '../../module/auth/guards';
 
 @Controller('wallet')
 export class WalletController {
