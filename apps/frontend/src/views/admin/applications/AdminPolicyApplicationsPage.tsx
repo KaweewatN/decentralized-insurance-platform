@@ -57,35 +57,25 @@ export default function AdminPolicyApplicationsPage() {
     fetchPolicies();
   }, []);
 
-  // Map statuses for display and filtering
-  const statusMap = {
-    Payment: "PendingPayment",
-    "Info Requested": "info_requested",
-    Approved: "Active",
-    Rejected: "Expired",
-  };
-
   // Separate policies by status
   const paymentPolicies = allPolicies.filter(
     (p) => p.status === "PendingPayment"
   );
-  const infoRequestedPolicies = allPolicies.filter(
-    (p) => p.status === "info_requested"
-  );
   const approvedPolicies = allPolicies.filter((p) => p.status === "Active");
-  const rejectedPolicies = allPolicies.filter((p) => p.status === "Expired");
+  const expiredPolicies = allPolicies.filter((p) => p.status === "Expired");
+  const rejectedPolicies = allPolicies.filter((p) => p.status === "Rejected");
 
   // Get policies for current tab
   const getCurrentTabPolicies = () => {
     switch (activeTab) {
       case "payment":
         return paymentPolicies;
-      case "info_requested":
-        return infoRequestedPolicies;
       case "approved":
         return approvedPolicies;
       case "rejected":
         return rejectedPolicies;
+      case "expired":
+        return expiredPolicies;
       default:
         return [];
     }
@@ -125,16 +115,16 @@ export default function AdminPolicyApplicationsPage() {
             <CheckCircle size={16} className="mr-1" /> Approved
           </Badge>
         );
-      case "Expired":
+      case "Rejected":
         return (
           <Badge className="bg-red-500 text-white flex items-center gap-1">
             <XCircle size={16} className="mr-1" /> Rejected
           </Badge>
         );
-      case "info_requested":
+      case "Expired":
         return (
-          <Badge className="bg-yellow-500 text-white flex items-center gap-1">
-            <Info size={16} className="mr-1" /> Info Requested
+          <Badge className="bg-gray-500 text-white flex items-center gap-1">
+            <Info size={16} className="mr-1" /> Expired
           </Badge>
         );
       default:
@@ -288,11 +278,11 @@ export default function AdminPolicyApplicationsPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="info_requested">
-                Info Requested
-                {infoRequestedPolicies.length > 0 && (
-                  <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                    {infoRequestedPolicies.length}
+              <TabsTrigger value="expired">
+                Expired
+                {expiredPolicies.length > 0 && (
+                  <span className="ml-2 bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                    {expiredPolicies.length}
                   </span>
                 )}
               </TabsTrigger>
@@ -369,9 +359,9 @@ export default function AdminPolicyApplicationsPage() {
           )}
 
           {renderTabContent(
-            "info_requested",
-            infoRequestedPolicies,
-            <Info className="h-12 w-12 text-yellow-300 mx-auto mb-4" />,
+            "expired",
+            expiredPolicies,
+            <Info className="h-12 w-12 text-gray-300 mx-auto mb-4" />,
             "Policies Awaiting Additional Information",
             "There are no policies awaiting additional information."
           )}

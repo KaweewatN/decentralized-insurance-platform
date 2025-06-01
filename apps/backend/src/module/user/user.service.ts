@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { ClaimType } from '@prisma/client';
 import { PrismaService } from '../../service/prisma/prisma.service';
+import { SupabaseClaimService } from '../file-upload/supabase.claim.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly supabaseClaimService: SupabaseClaimService,
+  ) {}
 
   async getPoliciesByWallet(walletAddress: string, policyId?: string) {
     return this.prisma.policy.findMany({
@@ -14,6 +19,7 @@ export class UserService {
       orderBy: { createdAt: 'desc' },
       include: {
         user: true,
+        claims: true,
       },
     });
   }
@@ -43,6 +49,62 @@ export class UserService {
         gender: true,
         occupation: true,
         contactInfo: true,
+      },
+    });
+  }
+
+  async createClaim(claimData: {
+    policyId: string;
+    planType: string;
+    walletAddress: string;
+    subject: string;
+    incidentDate: string;
+    incidentDescription: string;
+    document: {
+      name: string;
+      base64: string;
+      type: string;
+      size: number;
+    };
+  }) {
+    // Validate claim data
+    const documentUrl = await this.supabaseClaimService.uploadDocumentBase64(
+      claimData.document.base64,
+      claimData.document.name,
+      claimData.walletAddress,
+    );
+
+    let contractAddress;
+
+    switch (claimData.planType.toLowerCase()) {
+      case 'health':
+        contractAddress = process.env.HEALTHCARE_LITE_ADDRESS;
+        break;
+      case 'flight':
+        contractAddress = process.env.FLIGHT_CONTRACT_ADDRESS;
+        break;
+      case 'rainfall':
+        contractAddress = process.env.RAINFALL_INSURANCE_CONTRACT_ADDRESS;
+        break;
+      case 'life':
+        contractAddress = process.env.LIFECARE_LITE_ADDRESS;
+        break;
+      default:
+        throw new Error(`Unknown plan type: ${claimData.planType}`);
+    }
+
+    // Create claim in database
+    return this.prisma.claim.create({
+      data: {
+        walletAddress: claimData.walletAddress,
+        contractAddress,
+        policyId: claimData.policyId,
+        subject: claimData.subject,
+        description: claimData.incidentDescription,
+        dateOfIncident: new Date(claimData.incidentDate),
+        amount: 0, // Set default or calculate based on policy
+        documentUrl,
+        type: claimData.planType.toUpperCase() as ClaimType,
       },
     });
   }

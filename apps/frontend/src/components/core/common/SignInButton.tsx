@@ -72,7 +72,26 @@ export default function SignInButton() {
         if (res?.ok) {
           setResponse("Sign in successful");
           toastSuccess("Sign in successful");
-          router.push("/dashboard");
+
+          // Wait a moment for session to update, then check role
+          setTimeout(async () => {
+            // Trigger session update
+            await signIn("credentials", {
+              redirect: false,
+              walletAddress: address,
+            });
+
+            // Check updated session
+            const updatedSession = await fetch("/api/auth/session").then(
+              (res) => res.json()
+            );
+
+            if (updatedSession?.user?.role === "ADMIN") {
+              router.push("/admin");
+            } else {
+              router.push("/dashboard");
+            }
+          }, 1000);
         } else {
           setResponse(res?.error || "Failed to sign in");
           toastError(res?.error || "Failed to sign in");

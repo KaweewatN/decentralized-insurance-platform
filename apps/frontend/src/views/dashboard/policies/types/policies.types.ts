@@ -1,12 +1,7 @@
 export interface PolicyCardProps {
   id: string;
-  type: "health" | "flight" | "rainfall";
-  status:
-    | "active"
-    | "expired"
-    | "pending-payment"
-    | "claimed"
-    | "payout-processed";
+  type: "health" | "flight" | "rainfall" | "life";
+  status: "active" | "expired" | "pending-payment" | "claimed" | "rejected";
   coverageDetail: string;
   startDate: string;
   endDate: string;
@@ -15,14 +10,14 @@ export interface PolicyCardProps {
 
 export interface PolicyDetailsProps {
   id: string;
-  type: "health" | "flight" | "rainfall";
-  status: "active" | "expired" | "pending-payment" | "claimed";
+  type: "health" | "flight" | "rainfall" | "life";
+  status: "active" | "expired" | "pending-payment" | "claimed" | "rejected";
   coverageDetail: string;
   startDate: string;
   endDate: string;
   premium: string;
   coverageAmount: string;
-  sumAssured: string;
+  totalPremium: string;
   policyHolder: {
     name: string;
     walletAddress: string;
@@ -30,7 +25,8 @@ export interface PolicyDetailsProps {
   blockchain: {
     contractAddress: string;
     network: string;
-    transactionHash: string;
+    purchaseTransactionHash: string;
+    contractCreationHash?: string;
   };
   canClaim: boolean;
   claimHistory?: Array<{

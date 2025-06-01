@@ -79,17 +79,13 @@ export class InsuranceController {
   async calculateHealthPremium(
     @Body()
     dto: {
-      age: number;
-      gender: string;
-      occupation: string;
+      walletAddress: string;
       sumAssured: number;
     },
   ) {
     try {
-      const premiumThb = this.health.calculatePremium(
-        dto.age,
-        dto.gender,
-        dto.occupation,
+      const premiumThb = await this.health.calculatePremium(
+        dto.walletAddress,
         dto.sumAssured,
       );
       const exchangeRate = await this.rateService.getEthToThbRate();
@@ -107,19 +103,26 @@ export class InsuranceController {
     }
   }
 
+  @Post('health/user/purchase')
+  async userPurchaseHealthPolicy(@Body() body: any) {
+    return this.health.userHealthPurchase(body);
+  }
+
   @Post('health/purchase')
   async purchaseHealth(
     @Body()
     dto: {
       userId: string;
-      age: number;
-      gender: string;
-      occupation: string;
       sumAssured: number;
+      policyId?: string;
     },
   ) {
     try {
-      const result = await this.health.purchasePolicy(dto);
+      const result = await this.health.purchasePolicy({
+        userId: dto.userId,
+        sumAssured: dto.sumAssured,
+        policyId: dto.policyId,
+      });
       return {
         ...result,
         message: 'Health policy purchased successfully',

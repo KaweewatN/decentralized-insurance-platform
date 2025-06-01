@@ -157,12 +157,12 @@ export class FlightInsuranceService {
       data: {
         walletAddress: application.walletAdress,
         premium: application.premiumPerPerson,
-        sumAssured: application.totalPremium,
+        totalPremium: application.totalPremium,
         coverageAmount: application.coverageAmount,
         status: 'PendingPayment',
         coverageStartDate,
         coverageEndDate,
-        transactionHash: application.transactionHash,
+        purchaseTransactionHash: application.transactionHash,
         contractAddress: insurancePoolWallet,
         documentUrl, // Store the uploaded document URL
         planTypeId,

@@ -91,6 +91,7 @@ export function FlightDetailsForm({
       ? process.env.NEXT_PUBLIC_BACKEND_URL
       : "http://localhost:3001/api";
   const [ethToThb, setEthToThb] = useState<number | null>(null);
+  console.log(ethToThb);
 
   const [premium, setPremium] = useState<{
     premiumPerPerson: number | null;

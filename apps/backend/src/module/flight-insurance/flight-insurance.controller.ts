@@ -81,7 +81,7 @@ export class FlightInsuranceController {
   async confirmPayment(
     @Body('applicationId') applicationId: string,
     @Body('policyIdOnChain') policyIdOnChain: number,
-    @Body('transactionHash') transactionHash: string,
+    @Body('purchaseTransactionHash') transactionHash: string,
   ) {
     return this.flightInsuranceService.confirmPayment(
       applicationId,

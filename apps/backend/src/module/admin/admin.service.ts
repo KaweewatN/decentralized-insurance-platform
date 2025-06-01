@@ -18,6 +18,7 @@ export class AdminService {
         1: 'Health Insurance',
         2: 'Parametric Flight',
         3: 'Parametric Rainfall',
+        4: 'Life Insurance',
       };
 
       // Format plan type summary
@@ -110,6 +111,7 @@ export class AdminService {
         1: 'Health Insurance',
         2: 'Parametric Flight',
         3: 'Parametric Rainfall',
+        4: 'Life Insurance',
       };
 
       const summary = counts.map((item: any) => ({
@@ -130,12 +132,12 @@ export class AdminService {
     }
   }
 
-  async getPolicyByIdAndPlanType(policyId: number, planTypeId: number) {
+  async getPolicyByIdAndPlanType(policyId: string) {
     try {
+      // First get the base policy to determine the plan type
       const policy = await this.prisma.policy.findFirst({
         where: {
-          id: policyId.toString(),
-          planTypeId: planTypeId,
+          id: policyId,
         },
         include: {
           user: {
@@ -156,11 +158,57 @@ export class AdminService {
         throw new Error('Policy not found');
       }
 
-      return policy;
+      // Fetch specific policy details based on plan type
+      let specificPolicyDetails = null;
+
+      switch (policy.planTypeId) {
+        case 1: // Health Insurance
+          specificPolicyDetails = await this.prisma.healthPolicy.findFirst({
+            where: { policyId: policyId },
+          });
+          break;
+        case 2: // Parametric Flight
+          specificPolicyDetails = await this.prisma.flightPolicy.findFirst({
+            where: { policyId: policyId },
+          });
+          break;
+        case 3: // Parametric Rainfall
+          specificPolicyDetails = await this.prisma.rainfallPolicy.findFirst({
+            where: { policyId: policyId },
+          });
+          break;
+        case 4: // Life Insurance
+          specificPolicyDetails = await this.prisma.lifePolicy.findFirst({
+            where: { policyId: policyId },
+          });
+          break;
+        default:
+          throw new Error(`Unknown plan type: ${policy.planTypeId}`);
+      }
+
+      return {
+        ...policy,
+        specificDetails: specificPolicyDetails,
+      };
     } catch (error) {
       console.error('[AdminService][getPolicyByIdAndPlanType] Error:', error);
       throw new Error(
         `Failed to fetch policy: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  async rejectPolicy(policyId: string) {
+    try {
+      const updatedPolicy = await this.prisma.policy.update({
+        where: { id: policyId },
+        data: { status: 'Rejected' },
+      });
+      return updatedPolicy;
+    } catch (error) {
+      console.error('[AdminService][rejectPolicy] Error:', error);
+      throw new Error(
+        `Failed to reject policy: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

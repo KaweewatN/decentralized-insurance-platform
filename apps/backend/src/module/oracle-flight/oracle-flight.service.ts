@@ -141,11 +141,14 @@ export class OracleFlightService {
                 walletAddress: updated.holder,
                 policyId: String(policyId),
                 amount: updated.payoutAmount,
-                transactionHash: tx.hash,
+                claimedTransactionHash: tx.hash,
                 contractAddress: this.contract.target.toString(),
                 type: ClaimType.FLIGHT,
-                status: 'Approved',
+                status: 'APPROVED',
                 approvedDate: new Date(),
+                subject: `Flight delay claim for policy ${policyId}`,
+                description: `Automatic payout for flight delay of ${delay} minutes`,
+                dateOfIncident: new Date(flightTime * 1000),
               },
             });
 

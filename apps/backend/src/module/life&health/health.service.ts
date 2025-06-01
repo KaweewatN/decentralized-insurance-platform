@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Web3Service } from './web3.service';
 import { RateService } from './rate.service';
 import { DataService, Policy } from './data.service';
-import { ethers } from 'ethers';
+import { PrismaService } from 'service/prisma/prisma.service';
+import { SupabaseHealthService } from 'module/file-upload/supabase.health.service';
+import { ethers, uuidV4 } from 'ethers';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class HealthService {
@@ -12,34 +15,152 @@ export class HealthService {
     private web3: Web3Service,
     private rateService: RateService,
     private dataService: DataService,
+    private prisma: PrismaService,
+    private supabaseService: SupabaseHealthService,
   ) {}
 
-  calculatePremium(
-    age: number,
-    gender: string,
-    occupation: string,
+  async calculatePremium(
+    walletAddress: string,
     sumAssured: number,
-  ): number {
+  ): Promise<number> {
+    const user = await this.prisma.user.findUnique({
+      where: { walletAddress },
+      select: {
+        age: true,
+        occupation: true,
+        gender: true,
+      },
+    });
+    if (!user) {
+      this.logger.error(`User not found for wallet: ${walletAddress}`);
+      throw new Error('User not found');
+    }
     let base = 1200;
 
-    if (age < 18) base += 200;
-    else if (age > 60) base += 400;
+    if (user.age < 18) base += 200;
+    else if (user.age > 60) base += 400;
 
-    if (gender.toLowerCase() === 'female') base -= 100;
-    if (occupation.toLowerCase().includes('construction')) base += 300;
-    if (occupation.toLowerCase().includes('pilot')) base += 500;
+    if (user.gender.toLowerCase() === 'female') base -= 100;
+    if (user.occupation.toLowerCase().includes('construction')) base += 300;
+    if (user.occupation.toLowerCase().includes('pilot')) base += 500;
 
     const premium = Math.round((base * sumAssured) / 100000);
     this.logger.log(`🧮 Health premium calculated: ${premium} THB`);
     return premium;
   }
 
+  async userHealthPurchase(input: {
+    user_address: string;
+    sumAssured: number;
+    premium: number;
+    coverageAmount: number;
+    preExistingConditions: string;
+    bmi: number;
+    smokingStatus: string;
+    exerciseFrequency: string;
+    expectedNumber: number;
+    fileUpload?: string;
+    purchaseTransactionHash: string;
+    premiumEth?: number;
+    sumAssuredEth?: number;
+  }) {
+    const documentUrl = input.fileUpload
+      ? await this.supabaseService.uploadDocumentBase64(
+          input.fileUpload,
+          `health-policy-${input.user_address}-${Date.now()}`,
+          input.user_address,
+        )
+      : null;
+
+    // Validate and sanitize BMI value
+    const sanitizedBMI = Math.min(
+      Math.max(parseFloat(input.bmi.toString()), 10),
+      99.99,
+    );
+
+    // Validate other numeric fields
+    const sanitizedPremium = Math.max(0, parseFloat(input.premium.toString()));
+    const sanitizedCoverageAmount = Math.max(
+      0,
+      parseFloat(input.sumAssured.toString()), // Use sumAssured from input
+    );
+
+    const sanitizedExpectedNumber = Math.max(
+      1,
+      parseInt(input.expectedNumber.toString()),
+    );
+
+    this.logger.log(`📊 Health Policy Data Validation:
+    - BMI: ${input.bmi} → ${sanitizedBMI}
+    - Premium: ${input.premium} → ${sanitizedPremium}
+    - Coverage Amount: ${input.sumAssured} → ${sanitizedCoverageAmount}
+    - Expected Number: ${input.expectedNumber} → ${sanitizedExpectedNumber}`);
+
+    try {
+      // 1. Create Policy - Use coverageAmount instead of sumAssured
+      const policy = await this.prisma.policy.create({
+        data: {
+          id: uuidV4(randomBytes(16)),
+          walletAddress: input.user_address,
+          premium: sanitizedPremium,
+          totalPremium: sanitizedPremium,
+          coverageAmount: sanitizedCoverageAmount, // This is the correct field name
+          status: 'PendingPayment',
+          coverageStartDate: new Date(),
+          coverageEndDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          contractAddress:
+            process.env.HEALTH_CONTRACT_ADDRESS ||
+            '0x07c11f8CB34df0f29f91A2eE2be00708f3ab2480',
+          planTypeId: 1,
+          documentUrl: documentUrl || null,
+          purchaseTransactionHash: input.purchaseTransactionHash,
+        },
+      });
+
+      // 2. Create HealthPolicy linked to Policy with sanitized data
+      await this.prisma.healthPolicy.create({
+        data: {
+          policyId: policy.id,
+          preExistingConditions: input.preExistingConditions || 'None',
+          medicalCoverage: sanitizedCoverageAmount,
+          bmi: sanitizedBMI, // Use sanitized BMI value
+          smokingStatus: input.smokingStatus as any,
+          exerciseFrequency: input.exerciseFrequency as any,
+          expectedNumber: sanitizedExpectedNumber,
+        },
+      });
+
+      this.logger.log(`✅ Health policy created successfully:
+      - Policy ID: ${policy.id}
+      - User: ${input.user_address}
+      - Coverage Amount: ${sanitizedCoverageAmount}
+      - BMI: ${sanitizedBMI}
+      - Transaction: ${input.purchaseTransactionHash}`);
+
+      return {
+        success: true,
+        policyId: policy.id,
+        message: 'Health policy purchased successfully',
+      };
+    } catch (error) {
+      this.logger.error(`❌ Health policy creation failed: ${error.message}`);
+
+      // Provide more specific error information
+      if (error.message.includes('numeric field overflow')) {
+        throw new Error(
+          `Data validation error: One of the numeric values is too large for the database. Please check BMI (${sanitizedBMI}), Premium (${sanitizedPremium}), or Coverage Amount (${sanitizedCoverageAmount}) values.`,
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  // ซื้อ policy
   async purchasePolicy(data: {
     userId: string;
-    age: number;
-    gender: string;
-    occupation: string;
     sumAssured: number;
+    policyId?: string;
   }) {
     try {
       // validation logic ตามเดิม
@@ -54,10 +175,8 @@ export class HealthService {
         throw new Error(validation.reason);
       }
 
-      const premiumThb = this.calculatePremium(
-        data.age,
-        data.gender,
-        data.occupation,
+      const premiumThb = await this.calculatePremium(
+        data.userId,
         data.sumAssured,
       );
 
@@ -111,7 +230,42 @@ export class HealthService {
         createdAt: Date.now(),
       };
 
+      // Save policy to DataService (blockchain data)
       this.dataService.savePolicy(policy);
+
+      // Update specific policy in Prisma database - only if policyId is provided
+      let offchainPolicyId: string | null = null;
+
+      try {
+        if (data.policyId) {
+          // Update specific policy by provided ID only
+          const updatedPolicy = await this.prisma.policy.update({
+            where: {
+              id: data.policyId,
+            },
+            data: {
+              status: 'Active',
+              contractCreationHash: txHash,
+              updatedAt: new Date(),
+            },
+          });
+
+          offchainPolicyId = updatedPolicy.id;
+          this.logger.log(
+            `✅ Prisma policy updated to Active - Policy ID: ${offchainPolicyId}, TxHash: ${txHash}`,
+          );
+        } else {
+          this.logger.warn(
+            `⚠️ No policyId provided - skipping Prisma policy update`,
+          );
+        }
+      } catch (prismaError) {
+        this.logger.warn(
+          `⚠️ Failed to update Prisma policy status: ${prismaError.message}`,
+        );
+        // Don't throw error here as blockchain transaction was successful
+      }
+
       this.logger.log(
         `✅ Health policy created with blockchain ID: ${policy.id}`,
       );
@@ -119,6 +273,8 @@ export class HealthService {
       return {
         success: true,
         policy,
+        offchainPolicyId, // Include the off-chain policy ID for reference
+        blockchainPolicyId: policy.id, // Separate blockchain policy ID
         premiumThb,
         premiumEth: premiumEth.toFixed(6),
         exchangeRate: exchangeRate.toFixed(2),

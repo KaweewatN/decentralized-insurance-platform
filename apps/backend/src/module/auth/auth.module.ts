@@ -8,7 +8,7 @@ import { JwtStrategy } from './strategy';
   imports: [
     JwtModule.register({
       signOptions: {
-        expiresIn: '1h',
+        expiresIn: '2h',
       },
     }),
   ],

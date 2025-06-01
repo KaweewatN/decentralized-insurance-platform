@@ -283,7 +283,7 @@ export default function AccountPage({
                         <div className="flex items-center gap-x-5 mt-2">
                           <p className="text-2xl font-bold">
                             {ethBalance !== null
-                              ? `${Number(ethBalance).toFixed(6)} ETH`
+                              ? `${Number(ethBalance).toLocaleString()} ETH`
                               : "Loading..."}
                           </p>
 

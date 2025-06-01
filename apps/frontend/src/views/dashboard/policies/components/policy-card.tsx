@@ -78,7 +78,7 @@ export default function PolicyCard({
       case "pending-payment":
         return "default";
       case "claimed":
-      case "payout-processed":
+      case "rejected":
         return "destructive";
       default:
         return "default";
@@ -173,7 +173,9 @@ export default function PolicyCard({
             className="w-full sm:w-auto bg-[#28A745] hover:bg-[#218838] text-white text-sm h-8 px-3"
             asChild
           >
-            <Link href={`/dashboard/claims/submit?policyId=${id}`}>
+            <Link
+              href={`/dashboard/claims/submit?policyId=${id}&planType=${type}`}
+            >
               <PlusCircle className="w-3 h-3 mr-1" />
               Submit Claim
             </Link>

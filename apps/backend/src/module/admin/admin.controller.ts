@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, Put, ParseUUIDPipe } from '@nestjs/common';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -15,11 +15,15 @@ export class AdminController {
     return this.policyService.getAllPolicies();
   }
 
-  @Get('policy/:policyId/:planTypeId')
+  @Get('policy/:policyId')
   async getPolicyByIdAndPlanType(
-    @Param('policyId', ParseIntPipe) policyId: number,
-    @Param('planTypeId', ParseIntPipe) planTypeId: number,
+    @Param('policyId', ParseUUIDPipe) policyId: string,
   ) {
-    return this.policyService.getPolicyByIdAndPlanType(policyId, planTypeId);
+    return this.policyService.getPolicyByIdAndPlanType(policyId);
+  }
+
+  @Put('policy/rejected/:policyId')
+  async rejectPolicy(@Param('policyId', ParseUUIDPipe) policyId: string) {
+    return this.policyService.rejectPolicy(policyId);
   }
 }

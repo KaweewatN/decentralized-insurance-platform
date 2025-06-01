@@ -5,5 +5,5 @@ export default async function AdminApplicationPage({
 }: {
   params: { id: string };
 }) {
-  return <AdminApplicationDetailPage params={params} />;
+  return <AdminApplicationDetailPage params={params.id} />;
 }
