@@ -17,7 +17,7 @@ describe("HealthCareLite - Comprehensive Unit Tests", function () {
   let user2: SignerWithAddress;
   let unauthorized: SignerWithAddress;
 
-  const VAULT_INITIAL_BALANCE = ethers.parseEther("100.0");
+  const VAULT_INITIAL_BALANCE = ethers.parseEther("10.0");
   const PREMIUM_AMOUNT = ethers.parseEther("1.0");
   const SUM_ASSURED = ethers.parseEther("10.0");
   const DURATION = 365 * 24 * 60 * 60; // 365 days in seconds
