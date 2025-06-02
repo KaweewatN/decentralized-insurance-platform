@@ -1,8 +1,10 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { PrismaService } from 'src/service/prisma/prisma.service';
+import { PrismaService } from '../../service/prisma/prisma.service';
 import * as jwt from 'jsonwebtoken';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { SignUpType } from './types/auth.types';
+import { sign } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -64,5 +66,36 @@ export class AuthService {
     });
 
     return token;
+  }
+
+  async signup(signUpData: SignUpType) {
+    // Check if a user with the same walletAddress already exists
+    const existingUser = await this.prisma.user.findUnique({
+      where: { walletAddress: signUpData.walletAddress },
+    });
+
+    if (existingUser) {
+      throw new HttpException(
+        'A user with this wallet address already exists',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    // Create a new user
+    return this.prisma.user.create({
+      data: {
+        walletAddress: signUpData.walletAddress,
+        username: signUpData.username,
+        fullName: signUpData.fullName,
+        imageUrl: signUpData.imageUrl || '',
+        role: 'USER',
+        age: signUpData.age,
+        gender: signUpData.gender,
+        occupation: signUpData.occupation,
+        contactInfo: signUpData.contactInfo,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
   }
 }

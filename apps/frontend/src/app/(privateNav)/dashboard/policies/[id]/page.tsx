@@ -6,7 +6,7 @@ export default async function PoliciesPage({
 }: {
   params: { id: string };
 }) {
-  const policyId = params.id;
+  const policyId = await params.id;
   const walletAddress = await getWalletAddress();
   if (!walletAddress) {
     return <div>Wallet address not found</div>;

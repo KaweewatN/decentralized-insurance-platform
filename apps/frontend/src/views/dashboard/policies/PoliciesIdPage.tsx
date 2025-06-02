@@ -67,7 +67,6 @@ export default function PoliciesIdPage({
           setPolicy(null);
         } else {
           setPolicy(mapApiPolicyToDetails(found));
-          console.log("Policy details:", found);
         }
       } catch (err) {
         setError("Failed to load policy details. Please try again.");
@@ -107,6 +106,8 @@ export default function PoliciesIdPage({
     }
   };
 
+  console.log("Policy details:", policy);
+
   const getPolicyTypeDisplay = () => {
     if (!policy) return "Insurance Policy";
     switch (policy.type) {
@@ -132,6 +133,8 @@ export default function PoliciesIdPage({
         return "outline";
       case "claimed":
         return "default";
+      case "rejected":
+        return "destructive";
       default:
         return "default";
     }
@@ -238,7 +241,7 @@ export default function PoliciesIdPage({
                     asChild
                   >
                     <Link
-                      href={`/dashboard/claims/submit?policyId=${policy.id}`}
+                      href={`/dashboard/claims/submit?policyId=${policy.id}&planType=${policy.type}`}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Submit Claim
@@ -335,15 +338,18 @@ export default function PoliciesIdPage({
                           Transaction Hash
                         </p>
                         <a
-                          href={`https://sepolia.etherscan.io/tx/${policy.blockchain.transactionHash}`}
+                          href={`https://sepolia.etherscan.io/tx/${policy.blockchain.purchaseTransactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="font-mono text-sm text-blue-600 hover:underline flex items-center"
                         >
-                          {policy.blockchain.transactionHash.substring(0, 10)}
+                          {policy.blockchain.purchaseTransactionHash.substring(
+                            0,
+                            10
+                          )}
                           ...
-                          {policy.blockchain.transactionHash.substring(
-                            policy.blockchain.transactionHash.length - 8
+                          {policy.blockchain.purchaseTransactionHash.substring(
+                            policy.blockchain.purchaseTransactionHash.length - 8
                           )}
                           <ExternalLink className="ml-1 h-3 w-3" />
                         </a>
@@ -417,8 +423,9 @@ export default function PoliciesIdPage({
                           ≈ ฿{" "}
                           {policy.coverageAmount && ethToThb
                             ? (
-                                Number(policy.coverageAmount) * ethToThb
-                              ).toFixed(4)
+                                Number(policy.coverageAmount.replace("$", "")) *
+                                ethToThb
+                              ).toLocaleString()
                             : ""}
                         </p>
                       </div>
@@ -427,12 +434,15 @@ export default function PoliciesIdPage({
                       <p className="text-sm text-gray-500">Premium</p>
                       <div className="flex items-center gap-x-5">
                         <p className="text-2xl font-bold ">
-                          {policy.sumAssured} ETH
+                          {policy.totalPremium} ETH
                         </p>
                         <p className="text-sm text-gray-500">
                           ≈ ฿{" "}
-                          {policy.sumAssured && ethToThb
-                            ? (Number(policy.sumAssured) * ethToThb).toFixed(4)
+                          {policy.totalPremium && ethToThb
+                            ? (
+                                Number(policy.totalPremium.replace("$", "")) *
+                                ethToThb
+                              ).toLocaleString()
                             : ""}
                         </p>
                       </div>
@@ -584,9 +594,14 @@ export default function PoliciesIdPage({
                           <div className="flex items-start gap-3">
                             <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
                             <div>
-                              <p className="font-medium">{claim.id}</p>
+                              <p className="font-medium">
+                                Claim ID:{" "}
+                                <span className="text-primary font-medium">
+                                  {claim.id}
+                                </span>
+                              </p>
                               <p className="text-sm text-gray-500">
-                                {claim.date}
+                                {claim.date.split("T")[0]}{" "}
                               </p>
                             </div>
                           </div>
@@ -626,7 +641,7 @@ export default function PoliciesIdPage({
                       {policy.canClaim && (
                         <Button asChild>
                           <Link
-                            href={`/dashboard/claims/submit?policyId=${policy.id}`}
+                            href={`/dashboard/claims/submit?policyId=${policy.id}&planType=${policy.type}`}
                           >
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Submit a Claim

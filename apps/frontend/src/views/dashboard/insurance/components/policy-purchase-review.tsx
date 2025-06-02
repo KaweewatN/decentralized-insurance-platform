@@ -110,6 +110,50 @@ export function PolicyPurchaseReview({
         ],
       },
     },
+    life: {
+      title: "Life Insurance Policy Review",
+      subtitle:
+        "Review your life insurance policy details before proceeding to payment.",
+      coverage: {
+        title: "Coverage Details",
+        items: [
+          "Lump sum payout to beneficiaries upon policyholder's death",
+          "Coverage for death due to illness or accident",
+          "Worldwide coverage, 24/7",
+          "No restrictions on how beneficiaries use the payout",
+          "Option to add riders for critical illness or accidental death",
+          "Guaranteed payout amount as specified in the policy",
+          "Policy remains active as long as premiums are paid",
+          "Beneficiaries can be updated at any time",
+        ],
+      },
+      exclusions: {
+        title: "Policy Exclusions",
+        items: [
+          "Death due to suicide within the first 12 months",
+          "Death resulting from participation in criminal activities",
+          "Death due to pre-existing conditions not disclosed at application",
+          "Death from war or acts of terrorism",
+          "Death while participating in hazardous activities (unless covered by rider)",
+          "Non-payment of premiums resulting in policy lapse",
+          "Fraud or misrepresentation on the application",
+          "Death outside the policy coverage period",
+        ],
+      },
+      terms: {
+        title: "Terms & Conditions",
+        items: [
+          "Premiums must be paid on time to keep the policy active",
+          "Policy is non-transferable and non-assignable",
+          "Claims must be submitted with required documentation",
+          "Beneficiaries must be designated in writing",
+          "Policy can be cancelled with written notice",
+          "Waiting period of 12 months for suicide exclusion",
+          "Policy renewal subject to terms and conditions",
+          "Payout processed within 30 days of approved claim",
+        ],
+      },
+    },
     flight: {
       title: "Flight Delay Insurance Policy Review",
       subtitle:
@@ -221,7 +265,8 @@ export function PolicyPurchaseReview({
                   Premium Summary
                 </h3>
                 <p className="text-2xl font-bold text-green-900 mt-1">
-                  {premiumDetails.amount} {premiumDetails.currency}
+                  {premiumDetails.amount.toLocaleString()}{" "}
+                  {premiumDetails.currency}
                   {premiumDetails.frequency && (
                     <span className="text-sm font-normal text-green-700 ml-1">
                       {premiumDetails.frequency}
@@ -411,7 +456,7 @@ export function PolicyPurchaseReview({
         <CardFooter className="flex justify-between p-6 border-t">
           <Button
             variant="outline"
-            onClick={() => localStorage.removeItem("flightPolicyDraft")}
+            onClick={() => sessionStorage.removeItem("flightPolicyDraft")}
             asChild
           >
             <Link href="/dashboard">Cancel</Link>

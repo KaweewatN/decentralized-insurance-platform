@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ethers } from 'ethers';
-import * as contractJson from 'abis/FlightInsurance.json';
-import { PrismaService } from 'src/service/prisma/prisma.service';
+import * as contractJson from '../../../abis/FlightInsurance.json';
+import { PrismaService } from '../../service/prisma/prisma.service';
 import { PolicyStatus, ClaimType } from '@prisma/client';
 import axios from 'axios';
 
@@ -131,7 +131,7 @@ export class OracleFlightService {
           if (updated.eligibleForPayout) {
             // 1. Update policy status to 'claimed'
             await this.prisma.policy.update({
-              where: { id: policyId },
+              where: { id: String(policyId) },
               data: { status: PolicyStatus.Claimed },
             });
 
@@ -139,13 +139,16 @@ export class OracleFlightService {
             await this.prisma.claim.create({
               data: {
                 walletAddress: updated.holder,
-                policyId: policyId,
+                policyId: String(policyId),
                 amount: updated.payoutAmount,
-                transactionHash: tx.hash,
+                claimedTransactionHash: tx.hash,
                 contractAddress: this.contract.target.toString(),
                 type: ClaimType.FLIGHT,
-                status: 'Approved',
+                status: 'APPROVED',
                 approvedDate: new Date(),
+                subject: `Flight delay claim for policy ${policyId}`,
+                description: `Automatic payout for flight delay of ${delay} minutes`,
+                dateOfIncident: new Date(flightTime * 1000),
               },
             });
 

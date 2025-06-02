@@ -91,6 +91,7 @@ export function FlightDetailsForm({
       ? process.env.NEXT_PUBLIC_BACKEND_URL
       : "http://localhost:3001/api";
   const [ethToThb, setEthToThb] = useState<number | null>(null);
+  console.log(ethToThb);
 
   const [premium, setPremium] = useState<{
     premiumPerPerson: number | null;
@@ -208,8 +209,8 @@ export function FlightDetailsForm({
         probability,
       };
 
-      // Store the submission object in localStorage
-      localStorage.setItem("flightPolicyDraft", JSON.stringify(submission));
+      // Store the submission object in sessionStorage
+      sessionStorage.setItem("flightPolicyDraft", JSON.stringify(submission));
 
       setTimeout(() => {
         router.push("/dashboard/insurance/flight/apply/review-policy");
@@ -708,7 +709,7 @@ export function FlightDetailsForm({
             <Button
               variant="outline"
               type="button"
-              onClick={() => localStorage.removeItem("flightPolicyDraft")}
+              onClick={() => sessionStorage.removeItem("flightPolicyDraft")}
               asChild
             >
               <Link href="/dashboard">

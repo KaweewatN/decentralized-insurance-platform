@@ -48,7 +48,10 @@ export default function AccountPage({
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        const res = await apiService.get<any>("/wallet/balance", accessToken);
+        const res = await apiService.get<any>(
+          `/wallet/balance?walletAddress=${walletAddress}`,
+          accessToken
+        );
         setEthBalance(res?.data?.balance?.ether?.value.toString());
       } catch (err) {
         console.error("Fetch error:", err);
@@ -63,7 +66,6 @@ export default function AccountPage({
     const fetchEthPrice = async () => {
       try {
         const data = await apiService.get<any>("/price/eththb", accessToken);
-        console.log("ETH Price Response:", data);
         setEthPriceThb(Number(data?.ethToThb));
       } catch (err) {
         console.error("Fetch error:", err);
@@ -281,7 +283,7 @@ export default function AccountPage({
                         <div className="flex items-center gap-x-5 mt-2">
                           <p className="text-2xl font-bold">
                             {ethBalance !== null
-                              ? `${Number(ethBalance).toFixed(6)} ETH`
+                              ? `${Number(ethBalance).toLocaleString()} ETH`
                               : "Loading..."}
                           </p>
 

@@ -7,7 +7,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PriceService } from './price.service';
-import { JwtGuard } from '../auth/guards';
 
 @Controller('price')
 export class PriceController {

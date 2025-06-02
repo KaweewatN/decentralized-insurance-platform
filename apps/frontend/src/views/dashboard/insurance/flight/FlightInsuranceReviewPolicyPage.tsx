@@ -9,7 +9,7 @@ export default function FlightInsurancePolicyReviewPage() {
   const [policy, setPolicy] = useState<any | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("flightPolicyDraft");
+    const stored = sessionStorage.getItem("flightPolicyDraft");
     if (stored) {
       setPolicy(JSON.parse(stored));
     }

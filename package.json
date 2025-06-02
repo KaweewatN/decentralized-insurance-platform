@@ -41,5 +41,7 @@
     "remove-frontend": "lerna remove --scope frontend",
     "remove-backend": "lerna remove --scope backend",
     "remove-contracts": "lerna remove --scope contracts"
-  }
+  },
+  "repository": "https://github.com/KaweewatN/decentralized-insurance-platform.git",
+  "author": "Nicha <nichaboripunt@gmail.com>"
 }

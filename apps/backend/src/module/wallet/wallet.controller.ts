@@ -1,14 +1,17 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Query } from '@nestjs/common';
 import { WalletService } from './wallet.service';
-import { JwtGuard } from 'src/module/auth/guards';
+import { JwtGuard } from '../../module/auth/guards';
 
 @Controller('wallet')
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
   @Get('balance')
   @UseGuards(JwtGuard)
-  getBalance() {
-    return this.walletService.getBalance();
+  getBalance(@Query('walletAddress') walletAddress: string) {
+    if (!walletAddress) {
+      throw new Error('walletAddress query parameter is required');
+    }
+    return this.walletService.getBalance(walletAddress);
   }
 
   @Get('account')
@@ -34,5 +37,14 @@ export class WalletController {
       toWallet,
       value,
     );
+  }
+
+  @Get('recent-transactions')
+  @UseGuards(JwtGuard)
+  getRecentTransactions(@Query('walletAddress') walletAddress: string) {
+    if (!walletAddress) {
+      throw new Error('walletAddress query parameter is required');
+    }
+    return this.walletService.getRecentTransactions(walletAddress);
   }
 }

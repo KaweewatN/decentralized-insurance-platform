@@ -14,10 +14,10 @@ export default function FlightInsuranceSuccessPage() {
     searchParams.get("txHash") ||
     "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 
-  // Get policy draft from localStorage
+  // Get policy draft from sessionStorage
   const policyDraft = useMemo(() => {
     if (typeof window !== "undefined") {
-      const data = localStorage.getItem("flightPolicyDraft");
+      const data = sessionStorage.getItem("flightPolicyDraft");
       return data ? JSON.parse(data) : null;
     }
     return null;
@@ -151,7 +151,7 @@ export default function FlightInsuranceSuccessPage() {
 
             <CardFooter className="flex flex-col sm:flex-row gap-4 p-6">
               <Button
-                onClick={() => localStorage.remove("flightPolicyDraft")}
+                onClick={() => sessionStorage.remove("flightPolicyDraft")}
                 className="w-full sm:w-auto bg-[#0D47A1] hover:bg-[#083984] text-white"
                 asChild
               >
@@ -163,7 +163,7 @@ export default function FlightInsuranceSuccessPage() {
               <Button
                 variant="outline"
                 className="w-full sm:w-auto"
-                onClick={() => localStorage.remove("flightPolicyDraft")}
+                onClick={() => sessionStorage.remove("flightPolicyDraft")}
                 asChild
               >
                 <Link href="/dashboard/policies">
