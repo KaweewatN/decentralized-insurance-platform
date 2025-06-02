@@ -212,6 +212,9 @@ export default function ClaimSubmissionPage({
         "Your claim has been submitted successfully! You will receive updates on your claim status."
       );
       form.reset();
+      setTimeout(() => {
+        window.location.href = `/dashboard/claims/`;
+      }, 2000);
     } catch (error) {
       console.error("Error submitting claim:", error);
       setSubmitStatus("error");

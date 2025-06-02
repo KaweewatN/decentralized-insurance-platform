@@ -108,4 +108,42 @@ export class UserService {
       },
     });
   }
+
+  async getClaimsByWallet(walletAddress: string) {
+    return this.prisma.claim.findMany({
+      where: {
+        walletAddress,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        policy: {
+          select: {
+            id: true,
+            planType: true,
+            premium: true,
+            coverageAmount: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getClaimByClaimIdAndWallet(walletAddress: string, claimId: string) {
+    return this.prisma.claim.findFirst({
+      where: {
+        walletAddress,
+        id: claimId,
+      },
+      include: {
+        policy: {
+          select: {
+            id: true,
+            planType: true,
+            premium: true,
+            coverageAmount: true,
+          },
+        },
+      },
+    });
+  }
 }
