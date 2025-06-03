@@ -49,6 +49,7 @@ enum PolicyStatus {
 
 model Policy {
   id                      String       @id @default(uuid())
+  policyIdOnchain         String?      @unique
   walletAddress           String
   premium                 Decimal      @db.Decimal(15, 2)
   totalPremium            Decimal      @db.Decimal(15, 2)
@@ -87,6 +88,7 @@ model Claim {
   id                     String      @id @default(uuid())
   walletAddress          String
   policyId               String
+  policyIdOnchain        String?     @unique
   subject                String
   description            String
   dateOfIncident         DateTime

@@ -58,6 +58,11 @@ export default function PrimaryHeader() {
           icon: <Heart className="h-4 w-4" />,
         },
         {
+          name: "Life Insurance",
+          href: "/dashboard/insurance/life/apply",
+          icon: <Umbrella className="h-4 w-4" />,
+        },
+        {
           name: "Flight Delay Insurance",
           href: "/dashboard/insurance/flight/apply",
           icon: <Plane className="h-4 w-4" />,

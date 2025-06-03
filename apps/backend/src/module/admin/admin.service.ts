@@ -212,4 +212,104 @@ export class AdminService {
       );
     }
   }
+
+  async getAllClaims() {
+    try {
+      const claims = await this.prisma.claim.findMany({
+        include: {
+          policy: {
+            include: {
+              user: {
+                select: {
+                  walletAddress: true,
+                  fullName: true,
+                  username: true,
+                  age: true,
+                  gender: true,
+                  occupation: true,
+                  contactInfo: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Get claim summary by status
+      const claimStatusCounts = await this.prisma.claim.groupBy({
+        by: ['status'],
+        _count: { id: true },
+      });
+
+      const claimSummary = claimStatusCounts.map((item: any) => ({
+        status: item.status,
+        count: item._count.id,
+      }));
+
+      return {
+        summary: claimSummary,
+        claims,
+        totalClaims: claims.length,
+      };
+    } catch (error) {
+      console.error('[AdminService][getAllClaims] Error:', error);
+      throw new Error(
+        `Failed to fetch claims: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  async getClaimById(claimId: string) {
+    try {
+      const claim = await this.prisma.claim.findFirst({
+        where: { id: claimId },
+        include: {
+          policy: {
+            include: {
+              user: {
+                select: {
+                  walletAddress: true,
+                  fullName: true,
+                  username: true,
+                  age: true,
+                  gender: true,
+                  occupation: true,
+                  contactInfo: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!claim) {
+        throw new Error('Claim not found');
+      }
+
+      return claim;
+    } catch (error) {
+      console.error('[AdminService][getClaimById] Error:', error);
+      throw new Error(
+        `Failed to fetch claim: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  async rejectClaim(claimId: string) {
+    try {
+      const updatedClaim = await this.prisma.claim.update({
+        where: { id: claimId },
+        data: { status: 'REJECTED' },
+      });
+      return updatedClaim;
+    } catch (error) {
+      console.error('[AdminService][rejectClaim] Error:', error);
+      throw new Error(
+        `Failed to reject claim: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 }

@@ -244,6 +244,7 @@ export class HealthService {
               id: data.policyId,
             },
             data: {
+              policyIdOnchain: formattedPolicyId,
               status: 'Active',
               contractCreationHash: txHash,
               updatedAt: new Date(),
@@ -331,15 +332,35 @@ export class HealthService {
     try {
       this.logger.log(`👨‍💼 Admin filing health claim for policy: ${policyId}`);
 
-      // ดึง policy จาก blockchain
-      const policy = await this.getPolicyOnChain(policyId);
+      // First, get the off-chain policy to find the blockchain policy ID
+      const offChainPolicy = await this.prisma.policy.findUnique({
+        where: {
+          id: policyId, // This is the off-chain policy ID passed to the method
+        },
+      });
+
+      if (!offChainPolicy) {
+        throw new Error(`Off-chain policy not found: ${policyId}`);
+      }
+
+      if (!offChainPolicy.policyIdOnchain) {
+        throw new Error(`Policy not deployed to blockchain: ${policyId}`);
+      }
+
+      // Use the blockchain policy ID for blockchain operations
+      const blockchainPolicyId = offChainPolicy.policyIdOnchain;
+
+      // ดึง policy จาก blockchain using the blockchain policy ID
+      const policy = await this.getPolicyOnChain(blockchainPolicyId);
 
       if (
         !policy ||
         policy.id ===
           '0x0000000000000000000000000000000000000000000000000000000000000000'
       ) {
-        throw new Error(`Health policy not found: ${policyId}`);
+        throw new Error(
+          `Health policy not found on blockchain: ${blockchainPolicyId}`,
+        );
       }
 
       if (!policy.isActive) {
@@ -347,7 +368,9 @@ export class HealthService {
       }
 
       if (policy.isClaimed) {
-        this.logger.warn(`⚠️ Policy ${policyId} may have previous claims`);
+        this.logger.warn(
+          `⚠️ Policy ${blockchainPolicyId} may have previous claims`,
+        );
       }
 
       if (amountThb > policy.sumAssured) {
@@ -378,10 +401,10 @@ export class HealthService {
 
       const amountWei = this.web3.toWei(amountEth);
 
-      // 🔧 FIX: Handle the new return object from fileAndApproveClaim
+      // Use blockchain policy ID for blockchain operations
       const claimResult = await this.web3.fileAndApproveClaim(
         'health',
-        policy.id,
+        blockchainPolicyId, // Use blockchain policy ID
         amountWei,
       );
 
@@ -389,21 +412,65 @@ export class HealthService {
         `✅ Blockchain transaction successful: ${claimResult.transactionHash}`,
       );
 
-      // Save claim history (local) - FIX: Use transactionHash from the result object
+      // Save claim history (local) - Use blockchain policy ID for consistency
       const claim = {
         id: `claim_${Date.now()}`,
-        policyId: policy.id,
+        policyId: blockchainPolicyId, // Use blockchain policy ID
         amount: amountThb,
         amountEth,
         exchangeRate,
         status: 'approved' as const,
         createdAt: Date.now(),
-        txHash: claimResult.transactionHash, // 🔧 FIX: Extract transactionHash from result object
+        txHash: claimResult.transactionHash,
         processedBy: 'admin',
         beneficiary: policy.userId,
       };
 
       this.dataService.saveClaim(claim);
+
+      // Update claim status in database to APPROVED
+      try {
+        // Find the claim using the off-chain policy ID
+        const existingClaim = await this.prisma.claim.findFirst({
+          where: {
+            policyId: offChainPolicy.id, // Use the off-chain policy ID
+            status: {
+              in: ['PENDING'], // Only update pending claims
+            },
+          },
+          orderBy: {
+            createdAt: 'desc', // Get the most recent claim if multiple exist
+          },
+        });
+
+        if (existingClaim) {
+          await this.prisma.claim.update({
+            where: {
+              id: existingClaim.id,
+            },
+            data: {
+              status: 'APPROVED',
+              approvedDate: new Date(),
+              claimedTransactionHash: claimResult.transactionHash,
+              updatedAt: new Date(),
+            },
+          });
+
+          this.logger.log(
+            `✅ Database claim updated to APPROVED - Claim ID: ${existingClaim.id}, TxHash: ${claimResult.transactionHash}`,
+          );
+        } else {
+          this.logger.warn(
+            `⚠️ No pending claim found in database for off-chain policy: ${offChainPolicy.id}`,
+          );
+        }
+      } catch (dbError) {
+        this.logger.error(
+          `❌ Failed to update claim status in database: ${dbError.message}`,
+        );
+        // Don't throw error here as blockchain transaction was successful
+      }
+
       this.logger.log(
         `✅ Admin successfully processed health claim: ${claim.id} for user ${policy.userId}`,
       );
@@ -411,10 +478,9 @@ export class HealthService {
       return {
         success: true,
         claimId: claim.id,
-        txHash: claimResult.transactionHash, // 🔧 FIX: Extract transactionHash
+        txHash: claimResult.transactionHash,
         policyOwner: policy.userId,
         message: `Health claim approved and payment initiated for ${policy.userId}`,
-        // 🔥 NEW: Include additional information from the auto-approve result
         claimDetails: {
           amountThb,
           amountEth: claimResult.claimAmount,
@@ -422,6 +488,11 @@ export class HealthService {
           gasUsed: claimResult.gasUsed,
           blockNumber: claimResult.blockNumber,
           autoApproved: claimResult.success,
+        },
+        // Include both policy IDs for reference
+        policyIds: {
+          offChain: policyId,
+          onChain: blockchainPolicyId,
         },
       };
     } catch (error) {

@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "id": "claim_1748889541255",
+    "policyId": "0xe7cac3956bbb63a98918d688d97fcdce5de9bffe1394cd218b7d0b0ba0582005",
+    "amount": 100,
+    "amountEth": 0.00120428,
+    "exchangeRate": 83037.12044337,
+    "status": "approved",
+    "createdAt": 1748889541255,
+    "txHash": "0xbffd4bdfbb3df8de3b0a4ffed7765642ee5e4254b5d6d64eac365e2dacabe3f6",
+    "processedBy": "admin",
+    "beneficiary": "0xc724B6892AAbC09e5f4e053717c4F37e32484a08"
+  },
+  {
+    "id": "claim_1748929333401",
+    "policyId": "0xe7cac3956bbb63a98918d688d97fcdce5de9bffe1394cd218b7d0b0ba0582005",
+    "amount": 100,
+    "amountEth": 0.00117577,
+    "exchangeRate": 85050.50826172145,
+    "status": "approved",
+    "createdAt": 1748929333401,
+    "txHash": "0x60abdf62984d7c49ad215e7c92987fa5c53a4a4fc836c67031f0836971a9b779",
+    "processedBy": "admin",
+    "beneficiary": "0xc724B6892AAbC09e5f4e053717c4F37e32484a08"
+  },
+  {
+    "id": "claim_1748936233359",
+    "policyId": "0xebe61bb44896ba137255effbb9f101167c9ea7547a6610e392a4ecf2096a7732",
+    "amount": 100,
+    "amountEth": 0.00117437,
+    "exchangeRate": 85151.92408125,
+    "status": "approved",
+    "createdAt": 1748936233359,
+    "txHash": "0x84ad91e1eee9bef6d85850a6d3b0b8bec8abd5f1fd4bb863dc985a79b992e139",
+    "processedBy": "admin",
+    "beneficiary": "0xc724B6892AAbC09e5f4e053717c4F37e32484a08"
+  }
+]

@@ -264,5 +264,33 @@
     "isActive": true,
     "txHash": "0xf6d3b918bdc1fb029d3489931c0697d96523eb03d071c4b342308b8cfb244773",
     "createdAt": 1748781540732
+  },
+  {
+    "id": "0x6a72b557a1b5881825640e74edf36058c1cbd25ac15f757a3ee69f4d94daa308",
+    "userId": "0xc724B6892AAbC09e5f4e053717c4F37e32484a08",
+    "type": "health",
+    "premium": 600,
+    "sumAssured": 50001,
+    "premiumEth": 0.00709543,
+    "sumAssuredEth": 0.59129769,
+    "exchangeRate": 84561.4664875,
+    "expiry": 1780462056871,
+    "isActive": true,
+    "txHash": "0xc820ff2d9be366b706f67187fd8fd31d505d49b8f5fc638897c20fa39ecf2ddb",
+    "createdAt": 1748926056871
+  },
+  {
+    "id": "0xebe61bb44896ba137255effbb9f101167c9ea7547a6610e392a4ecf2096a7732",
+    "userId": "0xc724B6892AAbC09e5f4e053717c4F37e32484a08",
+    "type": "health",
+    "premium": 600,
+    "sumAssured": 50001,
+    "premiumEth": 0.00709543,
+    "sumAssuredEth": 0.59129769,
+    "exchangeRate": 84561.4664875,
+    "expiry": 1780462477175,
+    "isActive": true,
+    "txHash": "0x34491b2a920fece7f19c749aba94420ab4d1ea9351e36552193f83d84e4c6be9",
+    "createdAt": 1748926477175
   }
 ]
