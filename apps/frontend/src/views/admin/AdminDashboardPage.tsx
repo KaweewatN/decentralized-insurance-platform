@@ -142,7 +142,7 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="text-3xl font-bold">
                   {adminSummary.claimStatusCounts?.find(
-                    (item: any) => item.status === "PendingPayment"
+                    (item: any) => item.status === "PENDING"
                   )?.count ?? 0}
                 </div>
                 <div className="mt-2 flex justify-between items-center">

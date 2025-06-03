@@ -1,4 +1,4 @@
-import { HeartPulse, Plane, Cloud } from "lucide-react";
+import { HeartPulse, Plane, Cloud, Heart } from "lucide-react";
 import InsuranceProductCard from "./insurance-product-card";
 
 export default function InsuranceProductsSection() {
@@ -16,6 +16,20 @@ export default function InsuranceProductsSection() {
       ],
       ctaText: "Apply Now",
       ctaLink: "/dashboard/insurance/health/apply",
+    },
+    {
+      icon: <Heart className="w-6 h-6" />,
+      title: "Life Insurance",
+      description:
+        "Secure your family's future with transparent and reliable life coverage.",
+      features: [
+        "Blockchain-verified payouts",
+        "Transparent claim process",
+        "Flexible premium options",
+        "Instant beneficiary payments",
+      ],
+      ctaText: "Apply Now",
+      ctaLink: "/dashboard/insurance/life/apply",
     },
     {
       icon: <Plane className="w-6 h-6" />,
