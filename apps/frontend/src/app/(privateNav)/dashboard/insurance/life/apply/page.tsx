@@ -1,4 +1,4 @@
-import { RainfallInsuranceApplicaitionPage } from "@/views/dashboard/insurance/RainfallInsuranceApplicaitionPage";
+import { LifeInsuranceApplicationPage } from "@/views/dashboard/insurance/LifeInsuranceApplicationPage";
 import { getWalletAddress } from "@/app/api/auth/[...nextauth]/auth";
 
 export default async function LifeInsuranceApplication() {
@@ -15,5 +15,5 @@ export default async function LifeInsuranceApplication() {
       </div>
     );
   }
-  return <RainfallInsuranceApplicaitionPage walletAddress={walletAddress} />;
+  return <LifeInsuranceApplicationPage walletAddress={walletAddress} />;
 }
