@@ -12,13 +12,13 @@ describe("LifeCareLite - Comprehensive Unit Tests", function () {
   let user2: SignerWithAddress;
   let unauthorized: SignerWithAddress;
 
-  const VAULT_INITIAL_BALANCE = ethers.parseEther("100.0");
-  const PREMIUM_AMOUNT = ethers.parseEther("2.0");
-  const SUM_ASSURED = ethers.parseEther("50.0");
+  const VAULT_INITIAL_BALANCE = ethers.parseEther("10.0");
+  const PREMIUM_AMOUNT = ethers.parseEther("0.2");
+  const SUM_ASSURED = ethers.parseEther("5.0");
   const MAX_DURATION = 80 * 365 * 24 * 60 * 60; // 80 years in seconds
   const STANDARD_DURATION = 20 * 365 * 24 * 60 * 60; // 20 years in seconds
-  const CLAIM_AMOUNT = ethers.parseEther("25.0");
-  const REFUND_AMOUNT = ethers.parseEther("1.0");
+  const CLAIM_AMOUNT = ethers.parseEther("2.5");
+  const REFUND_AMOUNT = ethers.parseEther("0.1");
 
   let samplePolicyId: string;
   let adminRole: string;
@@ -1373,7 +1373,7 @@ describe("LifeCareLite - Comprehensive Unit Tests", function () {
       // Add more funds to vault first
       await owner.sendTransaction({
         to: vault.target,
-        value: ethers.parseEther("1000"), // Add substantial funds
+        value: ethers.parseEther("50"), // Add substantial funds
       });
 
       // Create multiple policies with better event handling

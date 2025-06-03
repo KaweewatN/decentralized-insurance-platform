@@ -12,9 +12,9 @@ describe("InsuranceVault", function () {
   let unauthorized: SignerWithAddress;
 
   const INITIAL_BALANCE = ethers.parseEther("10.0");
-  const PREMIUM_AMOUNT = ethers.parseEther("1.0");
-  const CLAIM_AMOUNT = ethers.parseEther("2.0");
-  const REFUND_AMOUNT = ethers.parseEther("0.5");
+  const PREMIUM_AMOUNT = ethers.parseEther("0.1");
+  const CLAIM_AMOUNT = ethers.parseEther("0.2");
+  const REFUND_AMOUNT = ethers.parseEther("0.05");
 
   beforeEach(async function () {
     [owner, user1, user2, insuranceContract, unauthorized] =
